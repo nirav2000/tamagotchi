@@ -1,0 +1,1143 @@
+Here is the **exact v1 implementation plan** for EduPet, structured so Codex can build it in the right order without drifting.
+
+# 1. Build order
+
+Use this order:
+
+1. `edupet-config.js`
+2. `edupet-storage.js`
+3. `edupet-core.js`
+4. `edupet-ui.js`
+5. `edupet.css`
+6. `demo/index.html`
+7. integration into one real app
+
+That order matters because:
+
+* config defines the rules
+* storage defines persistence
+* core depends on config + storage
+* UI depends on core
+* demo depends on all of them
+
+---
+
+# 2. Folder structure
+
+```text
+/shared/edupet/
+  edupet-config.js
+  edupet-storage.js
+  edupet-core.js
+  edupet-ui.js
+  edupet.css
+  assets/
+    pet-base.svg
+    accessory-book.svg
+    accessory-hat.svg
+    room-plant.svg
+  demo/
+    index.html
+```
+
+For v1, the SVG assets can be very simple. Even one base pet and a few accessory shapes is enough.
+
+---
+
+# 3. `edupet-config.js`
+
+This file is the **single source of truth** for all balancing rules.
+
+## Purpose
+
+It should export a single config object onto `window.EduPetConfig`.
+
+## Responsibilities
+
+* stat names and limits
+* stage thresholds
+* mood rules
+* event rewards
+* decay rules
+* unlock conditions
+* anti-grind limits
+* starter profile values
+* message pools
+
+## Shape
+
+```js
+window.EduPetConfig = {
+  version: 1,
+  storageKey: 'edupet.v1.profile',
+  stats: { ... },
+  starterProfile: { ... },
+  eventRewards: { ... },
+  stageRules: [ ... ],
+  moodRules: [ ... ],
+  dailyDecay: { ... },
+  antiGrind: { ... },
+  unlockRules: [ ... ],
+  messages: { ... }
+};
+```
+
+## What to include
+
+### A. Stat caps
+
+```js
+stats: {
+  energy: { min: 0, max: 100 },
+  confidence: { min: 0, max: 100 },
+  curiosity: { min: 0, max: 100 },
+  care: { min: 0, max: 100 },
+  knowledge: { min: 0, max: 100 },
+  xp: { min: 0, max: 999999 },
+  coins: { min: 0, max: 999999 },
+  cleanliness: { min: 0, max: 100 }
+}
+```
+
+### B. Starter profile
+
+Keep it readable and friendly:
+
+* stage: `egg`
+* mood: `curious`
+* moderate starter stats around 40–60
+* empty inventory with one starter item
+
+### C. Event rewards
+
+This is the mapping from event type to stat changes.
+
+### D. Stage rules
+
+Each stage entry should include:
+
+* `id`
+* `xpRequired`
+* minimum stat requirements
+* optional unlock on entry
+
+### E. Mood rules
+
+Make this a list of functions or declarative rules. For v1, declarative is safer:
+
+* low energy => sleepy
+* low care => worried
+* recent improvement => proud
+* high curiosity => curious
+* default => happy
+
+### F. Daily decay
+
+Only reduce:
+
+* energy
+* care
+* cleanliness
+
+Never reduce:
+
+* knowledge
+* xp
+* unlocks
+
+### G. Anti-grind rules
+
+Include:
+
+* per-session cap for `correct_answer`
+* per-session cap for `retry_attempt`
+* max rewarded `focus_minute` count per day
+* minimum session length for session bonus
+* cooldown for repeated care actions
+
+### H. Unlock rules
+
+Each unlock rule should include:
+
+* `id`
+* `type`
+* `condition`
+* `reward`
+
+Example:
+
+```js
+{
+  id: 'unlock-book',
+  type: 'accessory',
+  condition: { totalTasksCompleted: 50 },
+  reward: { accessory: 'book' }
+}
+```
+
+### I. Messages
+
+Grouped by category:
+
+* progress
+* improvement
+* sleepy
+* worried
+* unlock
+* greeting
+
+Keep them short.
+
+## Done criteria
+
+This file is done when:
+
+* no logic depends on magic numbers elsewhere
+* all event rewards live here
+* all thresholds live here
+* changing balance requires editing this file only
+
+---
+
+# 4. `edupet-storage.js`
+
+This file handles **save/load/import/export/reset**.
+
+## Purpose
+
+Expose `window.EduPetStorage`.
+
+## Responsibilities
+
+* load profile from localStorage
+* save profile to localStorage
+* create starter profile
+* reset profile
+* export JSON string
+* import JSON string/object
+* validate minimum schema
+* stamp timestamps
+
+## Public functions
+
+```js
+window.EduPetStorage = {
+  createStarterProfile,
+  loadProfile,
+  saveProfile,
+  resetProfile,
+  exportProfile,
+  importProfile,
+  validateProfile
+};
+```
+
+## Required behaviour
+
+### `createStarterProfile()`
+
+Returns a deep clone of `EduPetConfig.starterProfile`.
+
+### `loadProfile()`
+
+* read from localStorage
+* parse JSON safely
+* validate shape
+* return starter profile if invalid or missing
+
+### `saveProfile(profile)`
+
+* stringify safely
+* write to localStorage
+* update `lastUpdated`
+
+### `resetProfile()`
+
+* replace with starter profile
+* save immediately
+* return new profile
+
+### `exportProfile(profile)`
+
+* return pretty JSON string
+
+### `importProfile(input)`
+
+* accept JSON string or object
+* validate it
+* repair missing non-critical fields
+* preserve version if possible
+* save and return cleaned profile
+
+### `validateProfile(profile)`
+
+Must confirm at least:
+
+* object exists
+* `version` exists
+* `pet` exists
+* core stats exist
+* collections are arrays/objects as expected
+
+## Helper functions
+
+Codex should add:
+
+* `safeJsonParse`
+* `deepClone`
+* `ensureArray`
+* `ensureObject`
+* `normaliseProfile`
+
+## Done criteria
+
+This file is done when:
+
+* corrupted storage does not break the app
+* importing bad JSON fails gracefully
+* missing fields can be repaired
+* reset works instantly
+
+---
+
+# 5. `edupet-core.js`
+
+This is the **brain**. Most of the work is here.
+
+## Purpose
+
+Expose `window.EduPet`.
+
+## Responsibilities
+
+* initialise pet state
+* apply decay
+* record events
+* update stats
+* calculate stage
+* calculate mood
+* process unlocks
+* maintain per-app statistics
+* expose API for UI and integrations
+* notify listeners when state changes
+
+## Internal structure
+
+Use a module-like IIFE:
+
+```js
+(function () {
+  const state = { ... };
+  const listeners = [];
+  window.EduPet = { ... };
+})();
+```
+
+## Internal state
+
+Keep one in-memory `profile` object and sync it via storage.
+
+## Public API
+
+```js
+EduPet.init(options)
+EduPet.getState()
+EduPet.recordEvent(event)
+EduPet.recordEvents(eventsArray)
+EduPet.save()
+EduPet.reset()
+EduPet.exportState()
+EduPet.importState(json)
+EduPet.mount(selectorOrElement)
+EduPet.openPanel()
+EduPet.closePanel()
+EduPet.refreshUI()
+EduPet.feed()
+EduPet.tidy()
+EduPet.encourage()
+EduPet.play()
+EduPet.subscribe(listener)
+EduPet.unsubscribe(listener)
+```
+
+## Core functions that must exist internally
+
+### `init(options)`
+
+Should:
+
+* load profile
+* apply missed decay
+* set current `appId`
+* store options
+* calculate mood/stage
+* notify listeners
+
+### `recordEvent(event)`
+
+Must:
+
+* validate event
+* normalise defaults
+* apply anti-grind logic
+* apply rewards
+* update totals
+* update per-app stats
+* append small history entry
+* check stage change
+* check unlocks
+* recalculate mood
+* save
+* notify listeners
+
+### `recordEvents(eventsArray)`
+
+Just loops through `recordEvent`, but preferably batches save/notify for efficiency.
+
+### `applyEventRewards(profile, event)`
+
+Should:
+
+* look up reward in config
+* adjust stats
+* clamp stat values
+* support optional multipliers from `event.value` or difficulty
+
+### `applyAntiGrind(profile, event)`
+
+Should:
+
+* inspect session counters/day counters
+* reduce or zero out rewards for spammy repetition
+* return an adjusted reward object or multiplier
+
+### `applyDailyDecay(profile, now)`
+
+Should:
+
+* determine how many full days passed
+* apply decay once per day missed
+* clamp stats
+* update cleanliness
+* never destroy progress
+
+### `updateMood(profile, context)`
+
+Should:
+
+* inspect current stats + recent event
+* assign one mood string
+
+### `updateStage(profile)`
+
+Should:
+
+* compare XP/stats against rules
+* promote stage if thresholds met
+* never demote in v1
+
+### `checkUnlocks(profile)`
+
+Should:
+
+* iterate unlock rules
+* add newly earned unlocks
+* add inventory items/decor
+* queue unlock messages
+
+### `appendHistory(profile, entry)`
+
+Should store only short entries.
+Do not let history grow forever.
+Cap it, for example, at 100 items.
+
+### `updateStatsCounters(profile, event)`
+
+Should increment:
+
+* total sessions
+* total minutes
+* total tasks completed
+* total retries
+* total improvements
+* per-app equivalents
+
+### `clampProfileStats(profile)`
+
+Should clamp all numeric stats to config ranges.
+
+### `buildDerivedState(profile)`
+
+Should prepare friendly UI-ready state:
+
+* mood
+* stage label
+* progress to next stage
+* dominant need
+* available actions
+* recent message
+
+## Care action methods
+
+These should just call `recordEvent()` with standard event types:
+
+* `feed()` => `feed_pet`
+* `tidy()` => `tidy_room`
+* `encourage()` => `encourage_pet`
+* `play()` => `play_with_pet`
+
+## Session tracking
+
+Core should keep a small ephemeral runtime session object:
+
+* session start time
+* per-session event counts
+* last meaningful action time
+
+This is not essential to persist long-term.
+
+## History entry shape
+
+Keep it tiny:
+
+```js
+{
+  ts: 1711980000000,
+  type: 'task_completed',
+  appId: 'reading-app',
+  note: 'Completed a task'
+}
+```
+
+## Done criteria
+
+This file is done when:
+
+* events change stats correctly
+* stage changes work
+* unlocks work
+* bad events do not crash the library
+* localStorage always reflects the latest valid state
+
+---
+
+# 6. `edupet-ui.js`
+
+This file handles the **widget and panel rendering**.
+
+## Purpose
+
+Expose UI methods via `EduPet.mount`, `EduPet.openPanel`, `EduPet.closePanel`, `EduPet.refreshUI`.
+
+## Responsibilities
+
+* mount widget into a DOM element
+* render mini pet widget
+* render expanded pet panel
+* update stat bars
+* update message area
+* attach button handlers
+* reflect mood/stage/accessories visually
+* respond to state changes
+
+## UI pieces
+
+### A. Mini widget
+
+Contains:
+
+* pet sprite/container
+* speech bubble
+* stage label or icon
+* tap target to open panel
+
+### B. Expanded panel
+
+Contains:
+
+* larger pet area
+* room area
+* stat bars
+* action buttons
+* unlock/inventory strip
+* recent progress messages
+* close button
+
+### C. Optional toast
+
+For unlock or progress events.
+
+## Required functions
+
+```js
+mount(selectorOrElement)
+renderWidget(container, state)
+renderPanel(state)
+refreshUI()
+openPanel()
+closePanel()
+showToast(message)
+bindEvents()
+```
+
+## Rendering approach
+
+Use plain DOM methods or template strings.
+For your apps, template strings are fine as long as event binding is clean.
+
+## Important rules
+
+* only one panel at a time
+* clicking outside panel closes it
+* tapping widget opens it
+* buttons should never duplicate handlers after refresh
+* no framework assumptions
+
+## Visual state classes
+
+The renderer should add classes like:
+
+* `mood-happy`
+* `mood-sleepy`
+* `stage-baby`
+* `stage-explorer`
+* `has-accessory-book`
+
+That lets CSS do the rest.
+
+## Pet drawing
+
+For v1, the “pet” can be:
+
+* one main SVG or HTML blob body
+* two eyes
+* a mouth
+* optional accessory overlay
+
+Codex should not overcomplicate this.
+A charming simple shape is better than an unfinished elaborate one.
+
+## Done criteria
+
+This file is done when:
+
+* widget mounts anywhere
+* panel opens/closes reliably
+* clicking away closes panel
+* state changes update widget and panel automatically
+* no duplicate event listeners appear after repeated refreshes
+
+---
+
+# 7. `edupet.css`
+
+This file handles all visuals.
+
+## Responsibilities
+
+* base layout
+* widget styling
+* panel styling
+* stat bars
+* pet appearance
+* room appearance
+* mood/state animations
+* mobile friendliness
+
+## Sections to include
+
+### A. Reset/scope
+
+All classes should be prefixed:
+
+* `.edupet-*`
+
+### B. Widget
+
+Keep compact and neat.
+
+### C. Panel
+
+Should work well on iPad and desktop:
+
+* centered or bottom sheet style
+* soft corners
+* readable spacing
+* large tap targets
+
+### D. Pet area
+
+Simple body with mood variations.
+
+### E. Stat bars
+
+Five bars:
+
+* energy
+* confidence
+* curiosity
+* care
+* knowledge
+
+Use labels and widths based on inline styles or CSS vars.
+
+### F. Animations
+
+Keep small:
+
+* `edupet-idle-bob`
+* `edupet-blink`
+* `edupet-bounce`
+* `edupet-droop`
+* `edupet-wobble`
+
+### G. Toast
+
+Small, brief, non-intrusive.
+
+## Styling goal
+
+Not babyish. Not neon.
+Warm, clean, slightly playful.
+
+---
+
+# 8. `demo/index.html`
+
+This is extremely important. It is the **test harness**.
+
+## Purpose
+
+Let you test everything before integrating into a real app.
+
+## Must include
+
+### A. Widget mount point
+
+```html
+<div id="edupet-widget"></div>
+```
+
+### B. Event simulation buttons
+
+Buttons for:
+
+* session start
+* session end
+* focus minute
+* task completed
+* retry
+* improvement
+* challenge completed
+* correct
+* incorrect
+* new topic
+* feed
+* tidy
+* encourage
+* play
+
+### C. Raw JSON state viewer
+
+A `<pre>` block showing current profile.
+
+### D. Import/export/reset controls
+
+* export button
+* import textarea
+* import button
+* reset button
+
+### E. Fake app switcher
+
+A dropdown or buttons:
+
+* reading-app
+* spelling-app
+* maths-app
+
+This lets you test per-app stats.
+
+### F. Debug info
+
+Show:
+
+* current mood
+* stage
+* unlocked items
+* total XP
+* total sessions
+* per-session counters
+
+## Required behaviour
+
+When any event button is pressed:
+
+* pet updates visibly
+* JSON state updates
+* history updates
+* save persists
+
+## Done criteria
+
+This page is done when it can fully exercise the library without a real app.
+
+---
+
+# 9. Exact implementation sequence for Codex
+
+Tell Codex to work in these passes.
+
+## Pass 1 — config only
+
+Create full `edupet-config.js` with:
+
+* starter profile
+* event rewards
+* stages
+* moods
+* decay
+* anti-grind
+* unlocks
+* messages
+
+No UI yet.
+
+## Pass 2 — storage only
+
+Create `edupet-storage.js` and test manually in demo console:
+
+* create starter
+* load
+* save
+* reset
+* export/import
+
+## Pass 3 — core only
+
+Create `edupet-core.js` with:
+
+* init
+* getState
+* recordEvent
+* daily decay
+* stage/mood updates
+* unlocks
+* subscriptions
+
+At this stage, test in console only.
+
+## Pass 4 — minimal demo shell
+
+Create a bare `demo/index.html` that:
+
+* loads config/storage/core
+* shows buttons
+* prints JSON
+
+No fancy widget yet.
+
+## Pass 5 — UI
+
+Create `edupet-ui.js` and `edupet.css`:
+
+* mount widget
+* panel open/close
+* action buttons
+* basic animation classes
+
+## Pass 6 — polish
+
+Add:
+
+* unlock toasts
+* accessory overlays
+* better room visuals
+* better spacing
+* click-away close
+* listener cleanup checks
+
+## Pass 7 — real app integration
+
+Only after demo is stable.
+
+---
+
+# 10. Acceptance checklist
+
+Use this checklist before integrating anywhere.
+
+## Storage
+
+* profile loads after refresh
+* corrupted JSON does not break app
+* reset works
+* import/export works
+
+## Core
+
+* every event updates correctly
+* stats clamp correctly
+* stage promotion works
+* mood changes make sense
+* unlocks only unlock once
+* history does not grow endlessly
+
+## Anti-grind
+
+* spamming `correct_answer` gives reduced returns
+* spamming care buttons has cooldown
+* very short sessions do not give full session rewards
+
+## UI
+
+* widget renders
+* panel opens
+* panel closes on outside click
+* no repeated listeners after multiple opens
+* actions update instantly
+
+## Demo
+
+* all event buttons work
+* app switcher updates per-app stats
+* state viewer stays in sync
+
+---
+
+# 11. Integration contract for other apps
+
+Every real app should only need to do three things.
+
+## A. Load the library files
+
+```html
+<link rel="stylesheet" href="/shared/edupet/edupet.css">
+<script src="/shared/edupet/edupet-config.js"></script>
+<script src="/shared/edupet/edupet-storage.js"></script>
+<script src="/shared/edupet/edupet-core.js"></script>
+<script src="/shared/edupet/edupet-ui.js"></script>
+```
+
+## B. Initialise it
+
+```js
+EduPet.init({ appId: 'reading-app' });
+EduPet.mount('#edupet-widget');
+```
+
+## C. Send meaningful events
+
+```js
+EduPet.recordEvent({ appId: 'reading-app', type: 'session_start' });
+EduPet.recordEvent({ appId: 'reading-app', type: 'task_completed' });
+EduPet.recordEvent({ appId: 'reading-app', type: 'retry_attempt' });
+EduPet.recordEvent({ appId: 'reading-app', type: 'improvement_made' });
+EduPet.recordEvent({ appId: 'reading-app', type: 'session_end' });
+```
+
+That is the whole contract.
+
+---
+
+# 12. Things Codex must avoid
+
+Tell Codex not to do these:
+
+* no React/Vue/Svelte
+* no build tools
+* no TypeScript for v1
+* no canvas-based rendering unless necessary
+* no overengineered class hierarchy
+* no dependency on backend
+* no huge sprite sheet system
+* no dozens of pet species
+* no death mechanic
+* no harsh streak penalty
+* no long mini-games
+
+Keep it controlled.
+
+---
+
+# 13. One master build prompt for Codex
+
+Use this as the next prompt:
+
+```text
+Build the EduPet v1 shared vanilla JS library in this exact order and do not skip steps.
+
+Project structure:
+/shared/edupet/edupet-config.js
+/shared/edupet/edupet-storage.js
+/shared/edupet/edupet-core.js
+/shared/edupet/edupet-ui.js
+/shared/edupet/edupet.css
+/shared/edupet/demo/index.html
+
+General rules:
+- No frameworks
+- No build step
+- Plain HTML/CSS/JS only
+- GitHub Pages compatible
+- Clean modular code
+- Use window globals: EduPetConfig, EduPetStorage, EduPet
+- Keep code production-friendly and readable
+- Use localStorage persistence
+- Use SVG/simple DOM pet visuals
+- Do not add backend or account logic
+
+Step 1: create edupet-config.js
+Include:
+- version
+- storageKey
+- stat caps
+- starterProfile
+- eventRewards
+- growth stage rules
+- mood rules
+- daily decay rules
+- anti-grind rules
+- unlock rules
+- short message pools
+All balancing constants must live here.
+
+Step 2: create edupet-storage.js
+Expose:
+- createStarterProfile
+- loadProfile
+- saveProfile
+- resetProfile
+- exportProfile
+- importProfile
+- validateProfile
+Requirements:
+- safely parse JSON
+- repair missing optional fields
+- fail gracefully on bad storage/import data
+- always return a usable profile
+
+Step 3: create edupet-core.js
+Expose public API:
+- EduPet.init(options)
+- EduPet.getState()
+- EduPet.recordEvent(event)
+- EduPet.recordEvents(eventsArray)
+- EduPet.save()
+- EduPet.reset()
+- EduPet.exportState()
+- EduPet.importState(json)
+- EduPet.mount(selectorOrElement)
+- EduPet.openPanel()
+- EduPet.closePanel()
+- EduPet.refreshUI()
+- EduPet.feed()
+- EduPet.tidy()
+- EduPet.encourage()
+- EduPet.play()
+- EduPet.subscribe(listener)
+- EduPet.unsubscribe(listener)
+
+Core responsibilities:
+- load/save profile
+- apply daily decay
+- process events into stat changes
+- clamp stats
+- maintain totals and per-app stats
+- keep short capped history
+- apply anti-grind logic
+- update mood and stage
+- unlock accessories/decor once
+- notify subscribers after changes
+
+Use event types:
+session_start
+session_end
+focus_minute
+task_completed
+challenge_completed
+improvement_made
+mastery_gain
+retry_attempt
+mistake_corrected
+correct_answer
+incorrect_answer
+new_topic_tried
+optional_activity_done
+feed_pet
+tidy_room
+encourage_pet
+play_with_pet
+
+Step 4: create demo/index.html
+Requirements:
+- load config, storage, core
+- add buttons to simulate all event types
+- add app selector for reading-app, spelling-app, maths-app
+- show raw JSON state in a pre block
+- add export/import/reset controls
+- add mount point for the pet widget
+- this page must fully test the library before real integration
+
+Step 5: create edupet-ui.js and edupet.css
+UI requirements:
+- small widget mountable into any app
+- expanded panel opens on tap/click
+- clicking outside closes panel
+- stat bars
+- pet area
+- room area
+- action buttons for feed, tidy, encourage, play
+- mood/stage classes for styling
+- simple animations: idle bob, blink, bounce, droop, wobble
+- small toast for unlock/progress messages
+- avoid duplicate event listeners on refresh
+
+Step 6: polish and verify
+- ensure demo page exercises all functionality
+- ensure storage persists across refreshes
+- ensure anti-grind rules work
+- ensure unlocks only happen once
+- ensure panel close/open behaviour is reliable
+- ensure code stays simple and framework-free
+
+Do not move on to the next step until the previous file is complete and coherent.
+```
+
+---
+
+# 14. Best real app to integrate first
+
+Start with the app where the event signals are clearest.
+
+Best first choices:
+
+* reading comprehension app
+* spelling/grammar app
+
+For first integration, wire only:
+
+* `session_start`
+* `task_completed`
+* `retry_attempt`
+* `improvement_made`
+* `session_end`
+
+That gives enough signal without overcomplicating the first connection.
+
+---
+
+# 15. Best next design decision
+
+Before any styling debate, decide this one thing:
+
+**Is the pet one fixed character across all apps, or does it have skins/themes per app?**
+
+My recommendation for v1:
+
+* one fixed pet
+* optional small accessory/theme changes per app
+
+That preserves identity and keeps the system manageable.
+
+The next most useful step is to draft the **starter profile, full config object, and unlock table** in finished JS so it can be dropped straight into `edupet-config.js`.
