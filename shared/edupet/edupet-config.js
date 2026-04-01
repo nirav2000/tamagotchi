@@ -1,5 +1,5 @@
 (function () {
-  var CURRENT_VERSION = '0.1.1';
+  var CURRENT_VERSION = '0.2.0';
   var selectedVersion = window.EDUPET_SELECTED_VERSION || CURRENT_VERSION;
 
   window.EduPetConfig = {
@@ -31,7 +31,18 @@
       feed_pet: { energy: 10, care: 2, xp: 1 },
       tidy_room: { care: 6, confidence: 1, xp: 2 },
       encourage_pet: { confidence: 4, care: 3, xp: 2 },
-      play_with_pet: { energy: 3, curiosity: 3, confidence: 1, xp: 3 }
+      play_with_pet: { energy: 3, curiosity: 3, confidence: 1, xp: 3 },
+
+      idle_timeout: { energy: -6, care: -5, confidence: -2, xp: -1 },
+      task_abandoned: { confidence: -4, care: -2, xp: -3 },
+      focus_lost: { energy: -3, confidence: -1, xp: -1 },
+      rapid_switch: { curiosity: -2, confidence: -2, xp: -1 },
+      guessing_pattern: { confidence: -2, knowledge: -2, xp: -2 },
+      session_quit_early: { energy: -3, confidence: -5, care: -3, xp: -4 },
+
+      persisted_after_mistakes: { confidence: 5, care: 2, knowledge: 2, xp: 6 },
+      completed_after_retry: { confidence: 5, knowledge: 3, xp: 8 },
+      returned_after_break: { care: 4, energy: 3, confidence: 2, xp: 4 }
     },
     initialState: {
       stage: 'egg',
@@ -46,7 +57,25 @@
       updatedAt: null,
       lastEvent: null,
       lastEventAt: null,
-      history: []
+      history: [],
+      perApp: {},
+      totals: {
+        allEvents: 0,
+        positiveEvents: 0,
+        negativeEvents: 0
+      },
+      reaction: {
+        style: 'blink',
+        at: null
+      }
+    },
+    negativeEvents: {
+      idle_timeout: true,
+      task_abandoned: true,
+      focus_lost: true,
+      rapid_switch: true,
+      guessing_pattern: true,
+      session_quit_early: true
     },
     moods: ['happy', 'sleepy', 'curious', 'proud', 'worried'],
     moodMessages: {

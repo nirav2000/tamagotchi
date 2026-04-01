@@ -17,13 +17,10 @@
 
   function load(config) {
     var raw = localStorage.getItem(config.storageKey);
-    if (!raw) {
-      return buildStarterState(config);
-    }
+    if (!raw) return buildStarterState(config);
 
     try {
-      var parsed = JSON.parse(raw);
-      return normalize(parsed, config);
+      return normalize(JSON.parse(raw), config);
     } catch (err) {
       return buildStarterState(config);
     }
@@ -33,18 +30,18 @@
     var merged = clone(config.initialState);
     var key;
 
+    if (!state || typeof state !== 'object') return buildStarterState(config);
+
     for (key in merged) {
       if (Object.prototype.hasOwnProperty.call(state, key)) {
         merged[key] = state[key];
       }
     }
 
-    if (!merged.createdAt) {
-      merged.createdAt = nowISO();
-    }
-    if (!merged.updatedAt) {
-      merged.updatedAt = nowISO();
-    }
+    if (!merged.createdAt) merged.createdAt = nowISO();
+    if (!merged.updatedAt) merged.updatedAt = nowISO();
+    if (!Array.isArray(merged.history)) merged.history = [];
+    if (!merged.perApp || typeof merged.perApp !== 'object') merged.perApp = {};
 
     return merged;
   }
@@ -61,10 +58,24 @@
     return starter;
   }
 
+  function exportState(config) {
+    var state = load(config);
+    return JSON.stringify(state, null, 2);
+  }
+
+  function importState(raw, config) {
+    var parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    var normalized = normalize(parsed, config);
+    save(normalized, config);
+    return normalized;
+  }
+
   window.EduPetStorage = {
     load: load,
     save: save,
     reset: reset,
-    normalize: normalize
+    normalize: normalize,
+    exportState: exportState,
+    importState: importState
   };
 })();

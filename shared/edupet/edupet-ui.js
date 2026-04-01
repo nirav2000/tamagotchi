@@ -3,9 +3,7 @@
     var app = window.EduPet;
     var config = window.EduPetConfig;
 
-    if (!app || !config) {
-      throw new Error('EduPet UI requires core + config scripts.');
-    }
+    if (!app || !config) throw new Error('EduPet UI requires core + config scripts.');
 
     container.innerHTML = '';
 
@@ -19,6 +17,10 @@
 
     var panel = document.createElement('section');
     panel.className = 'edupet-panel is-open';
+
+    var pet = document.createElement('div');
+    pet.className = 'edupet-mini mood-curious reaction-blink';
+    pet.innerHTML = '<div class="pet-body"><span class="pet-eye eye-left"></span><span class="pet-eye eye-right"></span><span class="pet-mouth"></span><span class="pet-mark"></span></div>';
 
     var mood = document.createElement('div');
     mood.className = 'edupet-mood';
@@ -41,11 +43,12 @@
       button.className = 'edupet-action';
       button.textContent = eventName.replace(/_/g, ' ');
       button.addEventListener('click', function () {
-        app.recordEvent(eventName);
+        app.recordEvent({ type: eventName, appId: 'widget-actions' });
       });
       actions.appendChild(button);
     });
 
+    panel.appendChild(pet);
     panel.appendChild(mood);
     panel.appendChild(stage);
     panel.appendChild(message);
@@ -58,9 +61,14 @@
 
     toggle.addEventListener('click', function () {
       panel.classList.toggle('is-open');
+      widget.classList.add('pulse');
+      setTimeout(function () { widget.classList.remove('pulse'); }, 220);
     });
 
     app.onChange(function (state) {
+      var reactionClass = state.reaction && state.reaction.style ? 'reaction-' + state.reaction.style : 'reaction-blink';
+      pet.className = 'edupet-mini mood-' + state.mood + ' ' + reactionClass;
+
       mood.textContent = 'Mood: ' + state.mood;
       stage.textContent = 'Stage: ' + state.stage;
       message.textContent = config.moodMessages[state.mood] || config.moodMessages.happy;
@@ -72,15 +80,11 @@
         ['care', state.care],
         ['knowledge', state.knowledge],
         ['xp', state.xp]
-      ]
-        .map(function (pair) {
-          return '<div><strong>' + pair[0] + ':</strong> ' + pair[1] + '</div>';
-        })
-        .join('');
+      ].map(function (pair) {
+        return '<div><strong>' + pair[0] + ':</strong> ' + pair[1] + '</div>';
+      }).join('');
     });
   }
 
-  window.EduPetUI = {
-    render: render
-  };
+  window.EduPetUI = { render: render };
 })();

@@ -11,63 +11,85 @@
   background: var(--pet-bg);
   max-width: 340px;
   box-shadow: 0 6px 18px rgba(28, 35, 90, 0.12);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.edupet-widget.pulse { transform: scale(1.01); }
+
+.edupet-toggle,
+.edupet-action,
+.controls button,
+#resetState,
+#closeModal,
+#manualSubmit,
+#exportBtn,
+#importBtn,
+#resetBtn {
+  min-height: 44px;
+  touch-action: manipulation;
+  transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
 }
 
 .edupet-toggle {
-  width: 100%;
-  border: 0;
-  border-bottom: 1px solid var(--pet-border);
-  padding: 10px 12px;
-  text-align: left;
-  background: #f3f6ff;
-  font-weight: 700;
-  cursor: pointer;
+  width: 100%; border: 0; border-bottom: 1px solid var(--pet-border); padding: 10px 12px;
+  text-align: left; background: #f3f6ff; font-weight: 700; cursor: pointer;
 }
 
-.edupet-panel {
-  display: none;
-  padding: 12px;
+.edupet-toggle:focus-visible,
+.edupet-action:focus-visible,
+.controls button:focus-visible,
+#resetState:focus-visible,
+button:focus-visible {
+  outline: 3px solid rgba(86,103,255,.35);
+  outline-offset: 2px;
 }
 
-.edupet-panel.is-open {
-  display: block;
+.edupet-toggle:active,
+.edupet-action:active,
+.controls button:active,
+#resetState:active,
+button:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.12);
 }
 
-.edupet-mood,
-.edupet-stage {
-  font-weight: 700;
-  color: #1f2550;
-  margin-bottom: 6px;
-}
+.edupet-panel { display: none; padding: 12px; }
+.edupet-panel.is-open { display: block; }
 
-.edupet-message {
-  margin: 0 0 10px;
-  color: #40456b;
-}
+.edupet-mini { width: 84px; height: 84px; margin: 0 auto 10px; position: relative; }
+.pet-body { width: 84px; height: 84px; border-radius: 50%; background: #dfe6ff; position: relative; border: 2px solid #bec9ff; }
+.pet-eye { width: 9px; height: 12px; border-radius: 50%; background: #23274a; position: absolute; top: 29px; }
+.eye-left { left: 24px; }
+.eye-right { right: 24px; }
+.pet-mouth { width: 20px; height: 10px; border-bottom: 3px solid #23274a; border-radius: 0 0 20px 20px; position: absolute; left: 50%; transform: translateX(-50%); top: 46px; }
+.pet-mark { position: absolute; right: 8px; top: 8px; font-size: 14px; opacity: 0; }
 
-.edupet-stats {
-  display: grid;
-  gap: 6px;
-  grid-template-columns: 1fr 1fr;
-  margin-bottom: 10px;
-  font-size: 0.95rem;
-}
+.mood-happy .pet-body { background: #dff6e9; }
+.mood-sleepy .pet-body { background: #e7ebff; }
+.mood-curious .pet-body { background: #e8f7ff; }
+.mood-proud .pet-body { background: #fff4d9; }
+.mood-worried .pet-body { background: #ffe3e3; }
 
-.edupet-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+.mood-sleepy .pet-eye { height: 2px; top: 35px; }
+.mood-worried .pet-mouth { border-bottom: 0; border-top: 3px solid #23274a; border-radius: 20px 20px 0 0; top: 52px; }
+.mood-proud .pet-mark { opacity: 1; }
+.mood-proud .pet-mark::before { content: '✨'; }
+.mood-curious .pet-mouth { width: 10px; border-radius: 50%; border: 3px solid #23274a; border-top: 0; border-left: 0; transform: translateX(-50%) rotate(45deg); }
 
-.edupet-action {
-  border: 1px solid var(--pet-border);
-  border-radius: 999px;
-  background: white;
-  padding: 6px 10px;
-  cursor: pointer;
-  text-transform: capitalize;
-}
+.reaction-wobble .pet-body { animation: wobble .45s ease; }
+.reaction-sparkle .pet-mark { opacity: 1; animation: sparkle .6s ease; }
+.reaction-sweat .pet-mark { opacity: 1; }
+.reaction-sweat .pet-mark::before { content: '💧'; }
+.reaction-droop .pet-body { transform: translateY(3px); }
+.reaction-blink .pet-eye { animation: blink 2.2s ease infinite; }
 
-.edupet-action:hover {
-  border-color: var(--pet-accent);
-}
+@keyframes blink { 0%, 46%, 50%, 100% { transform: scaleY(1); } 48% { transform: scaleY(0.15); } }
+@keyframes wobble { 0%{transform:rotate(0)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} 100%{transform:rotate(0)} }
+@keyframes sparkle { 0%{transform:scale(.5);opacity:.2} 60%{transform:scale(1.3);opacity:1} 100%{transform:scale(1);opacity:1} }
+
+.edupet-mood,.edupet-stage { font-weight: 700; color: #1f2550; margin-bottom: 6px; }
+.edupet-message { margin: 0 0 10px; color: #40456b; }
+.edupet-stats { display: grid; gap: 6px; grid-template-columns: 1fr 1fr; margin-bottom: 10px; font-size: .95rem; }
+.edupet-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.edupet-action { border: 1px solid var(--pet-border); border-radius: 999px; background: white; padding: 6px 10px; cursor: pointer; text-transform: capitalize; }
+.edupet-action:hover { border-color: var(--pet-accent); background: #f4f6ff; }
