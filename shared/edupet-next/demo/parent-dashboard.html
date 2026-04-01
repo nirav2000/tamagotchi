@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduPet Parent Dashboard</title>
+  <link rel="stylesheet" href="../edupet.css" />
+  <style>
+    body{font-family:Arial,sans-serif;background:#f4f7ff;color:#1e2655;margin:20px}
+    main{max-width:1100px;margin:0 auto;display:grid;gap:16px}
+    .card{background:#fff;border:1px solid #d8defd;border-radius:16px;padding:16px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #e6eaff;text-align:left;vertical-align:top}
+    input,select,button{border:1px solid #cbd4ff;border-radius:999px;padding:10px 12px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    button{cursor:pointer} button:active{transform:scale(.98);background:#eef1ff}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    .mono{font-family:monospace;white-space:pre-wrap;background:#f8faff;border:1px solid #d8defd;border-radius:12px;padding:10px;max-height:260px;overflow:auto}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Parent Dashboard</h1>
+  <p><a href="./index.html">← Back to demo</a></p>
+
+  <section class="card"><div id="petMount"></div></section>
+
+  <section class="grid">
+    <article class="card">
+      <h2>Current Pet State</h2>
+      <div id="stateNow" class="mono"></div>
+    </article>
+    <article class="card">
+      <h2>Manual Event Entry</h2>
+      <div class="controls">
+        <select id="eventType"></select>
+        <input id="eventApp" value="parent-dashboard" aria-label="app id" />
+        <button id="recordEvent" type="button">Record event</button>
+      </div>
+      <p id="recordStatus"></p>
+    </article>
+  </section>
+
+  <section class="grid">
+    <article class="card">
+      <h2>Recent Events</h2>
+      <table><thead><tr><th>When</th><th>App</th><th>Event</th><th>Value</th></tr></thead><tbody id="historyBody"></tbody></table>
+    </article>
+    <article class="card">
+      <h2>Per-App Totals</h2>
+      <table><thead><tr><th>App</th><th>Sessions</th><th>Tasks</th><th>Retries</th><th>Focus</th><th>Top events</th></tr></thead><tbody id="perAppBody"></tbody></table>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2>Export / Import / Reset</h2>
+    <div class="controls">
+      <button id="doExport">Export</button>
+      <button id="doImport">Import</button>
+      <button id="doReset">Reset</button>
+    </div>
+    <textarea id="transfer" style="width:100%;min-height:120px;margin-top:10px"></textarea>
+  </section>
+</main>
+
+<script src="../edupet-config.js"></script>
+<script src="../edupet-storage.js"></script>
+<script src="../edupet-core.js"></script>
+<script src="../edupet-ui.js"></script>
+<script>
+(function(){
+  var eventType = document.getElementById('eventType');
+  Object.keys(window.EduPetConfig.events).forEach(function(name){
+    var option = document.createElement('option'); option.value = name; option.textContent = name; eventType.appendChild(option);
+  });
+
+  window.EduPet.mount(document.getElementById('petMount'));
+
+  function fmt(iso){ return iso ? new Date(iso).toLocaleString() : '-'; }
+
+  function render(){
+    var state = window.EduPet.getState();
+    document.getElementById('stateNow').textContent = JSON.stringify({
+      mood: state.mood, stage: state.stage, expression: state.expression, energy: state.energy,
+      confidence: state.confidence, curiosity: state.curiosity, care: state.care, knowledge: state.knowledge,
+      cleanliness: state.cleanliness, xp: state.xp, coins: state.coins, lastEvent: state.lastEvent, lastMessage: state.lastMessage
+    }, null, 2);
+
+    var historyBody = document.getElementById('historyBody'); historyBody.innerHTML = '';
+    (state.history || []).slice(-15).reverse().forEach(function(row){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + fmt(row.at) + '</td><td>' + row.appId + '</td><td>' + row.type + '</td><td>' + row.value + '</td>';
+      historyBody.appendChild(tr);
+    });
+
+    var perAppBody = document.getElementById('perAppBody'); perAppBody.innerHTML = '';
+    Object.keys(state.perApp || {}).forEach(function(appId){
+      var entry = state.perApp[appId] || {};
+      var eventCounts = entry.eventCounts || {};
+      var top = Object.keys(eventCounts).sort(function(a,b){return eventCounts[b]-eventCounts[a];}).slice(0,3).map(function(name){ return name + ' (' + eventCounts[name] + ')'; }).join(', ');
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + appId + '</td><td>' + (entry.sessions||0) + '</td><td>' + (entry.taskCompleted||0) + '</td><td>' + (entry.retries||0) + '</td><td>' + (entry.focusMinutes||0) + '</td><td>' + (top || '-') + '</td>';
+      perAppBody.appendChild(tr);
+    });
+  }
+
+  window.EduPet.onChange(render);
+  render();
+
+  document.getElementById('recordEvent').addEventListener('click', function(){
+    var ok = window.EduPet.recordEvent({
+      type: eventType.value,
+      appId: document.getElementById('eventApp').value || 'parent-dashboard',
+      value: 1
+    });
+    document.getElementById('recordStatus').textContent = ok ? 'Event recorded.' : 'Could not record event.';
+  });
+
+  document.getElementById('doExport').addEventListener('click', function(){ document.getElementById('transfer').value = window.EduPet.exportState(); });
+  document.getElementById('doImport').addEventListener('click', function(){ var raw=document.getElementById('transfer').value.trim(); if(raw) window.EduPet.importState(raw); });
+  document.getElementById('doReset').addEventListener('click', function(){ window.EduPet.reset(); });
+})();
+</script>
+</body>
+</html>

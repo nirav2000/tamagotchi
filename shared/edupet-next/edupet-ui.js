@@ -1,5 +1,6 @@
 (function () {
   var rootElements = null;
+  var lastReactionAt = null;
 
   function createEl(tag, className, text) {
     var el = document.createElement(tag);
@@ -39,6 +40,7 @@
     var miniMood = rootElements.miniMood;
 
     pet.className = 'edupet-pet mood-' + state.expression + ' stage-' + state.stage;
+    rootElements.miniPet.className = 'edupet-mini-pet mood-' + state.expression + ' stage-' + state.stage;
     bubble.textContent = state.lastMessage || 'Hello.';
     mood.textContent = 'Mood: ' + state.mood;
     stage.textContent = 'Stage: ' + state.stage;
@@ -56,6 +58,19 @@
 
     rootElements.xp.textContent = 'XP ' + Math.round(state.xp);
     rootElements.coins.textContent = 'Coins ' + Math.round(state.coins);
+
+    if (state.lastEventAt && state.lastEventAt !== lastReactionAt) {
+      lastReactionAt = state.lastEventAt;
+      rootElements.scene.classList.remove('is-reacting');
+      rootElements.scene.offsetHeight;
+      rootElements.scene.classList.add('is-reacting');
+      clearTimeout(rootElements.reactionTimer);
+      rootElements.reactionTimer = setTimeout(function () {
+        if (rootElements && rootElements.scene) {
+          rootElements.scene.classList.remove('is-reacting');
+        }
+      }, 900);
+    }
   }
 
   function closePanel() {
@@ -95,6 +110,10 @@
     var eyeRight = createEl('span', 'edupet-eye');
     var beak = createEl('div', 'edupet-beak');
     var blush = createEl('div', 'edupet-blush');
+    var variant = createEl('div', 'edupet-pet-variant');
+    var mouth = createEl('div', 'edupet-mouth');
+    var sparkle = createEl('div', 'edupet-effect sparkle');
+    var sweat = createEl('div', 'edupet-effect sweat');
     var floor = createEl('div', 'edupet-floor');
     var roomNote = createEl('div', 'edupet-room-note');
     var sidebar = createEl('div', 'edupet-sidebar');
@@ -125,6 +144,10 @@
     pet.appendChild(eyes);
     pet.appendChild(beak);
     pet.appendChild(blush);
+    variant.appendChild(mouth);
+    variant.appendChild(sparkle);
+    variant.appendChild(sweat);
+    pet.appendChild(variant);
 
     sky.innerHTML = '<span class="edupet-cloud cloud-a"></span><span class="edupet-cloud cloud-b"></span>';
     scene.appendChild(sky);
@@ -167,7 +190,9 @@
       panel: panel,
       backdrop: backdrop,
       pet: pet,
+      miniPet: miniPet,
       bubble: bubble,
+      scene: scene,
       mood: mood,
       stage: stage,
       roomNote: roomNote,
@@ -175,7 +200,8 @@
       miniStage: miniStage,
       miniMood: miniMood,
       xp: xpBadge,
-      coins: coinsBadge
+      coins: coinsBadge,
+      reactionTimer: null
     };
 
     header.addEventListener('click', function () {

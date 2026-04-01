@@ -106,7 +106,8 @@
         taskCompleted: 0,
         retries: 0,
         improvements: 0,
-        focusMinutes: 0
+        focusMinutes: 0,
+        eventCounts: {}
       };
     }
     return state.perApp[appId];
@@ -124,6 +125,9 @@
 
   function updateTotals(eventPayload) {
     var app = ensurePerApp(eventPayload.appId);
+
+    app.eventCounts[eventPayload.type] = (app.eventCounts[eventPayload.type] || 0) + eventPayload.value;
+
     if (eventPayload.type === 'session_start') {
       state.totals.sessions += 1;
       app.sessions += 1;
@@ -180,6 +184,13 @@
     };
 
     applyDailyDecay();
+
+    if (state.perApp && typeof state.perApp === 'object') {
+      Object.keys(state.perApp).forEach(function (appId) {
+        if (!state.perApp[appId].eventCounts) state.perApp[appId].eventCounts = {};
+      });
+    }
+
     delta = config.events[eventPayload.type];
     if (!delta) return false;
 

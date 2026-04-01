@@ -133,19 +133,42 @@
 }
 
 .edupet-close,
-.edupet-action {
+.edupet-action,
+.edupet-mini {
   border: 1px solid var(--edupet-border);
   background: #fff;
   color: var(--edupet-text);
   border-radius: 999px;
-  padding: 8px 14px;
   cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background-color .12s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.edupet-close,
+.edupet-action {
+  padding: 10px 16px;
 }
 
 .edupet-close:hover,
 .edupet-action:hover,
 .edupet-mini:hover {
   border-color: var(--edupet-accent);
+  box-shadow: 0 8px 16px rgba(90, 108, 255, 0.15);
+}
+
+.edupet-close:active,
+.edupet-action:active,
+.edupet-mini:active {
+  transform: translateY(1px) scale(0.98);
+  background: #eef1ff;
+}
+
+.edupet-close:focus-visible,
+.edupet-action:focus-visible,
+.edupet-mini:focus-visible {
+  outline: 3px solid rgba(90, 108, 255, 0.35);
+  outline-offset: 2px;
 }
 
 .edupet-layout {
@@ -300,6 +323,48 @@
 .edupet-blush::before { left: 6px; }
 .edupet-blush::after { right: 6px; }
 
+
+.edupet-pet-variant {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.edupet-mouth {
+  position: absolute;
+  left: 50%;
+  top: 136px;
+  width: 44px;
+  height: 20px;
+  margin-left: -22px;
+  border-bottom: 4px solid #2f3568;
+  border-radius: 0 0 24px 24px;
+}
+
+.edupet-effect {
+  position: absolute;
+  opacity: 0;
+}
+
+.edupet-effect.sparkle {
+  left: 50%;
+  top: 52px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  box-shadow: -42px 28px 0 #fff8d4, 40px 16px 0 #fff1a3, 0 -14px 0 #fff;
+}
+
+.edupet-effect.sweat {
+  right: 56px;
+  top: 74px;
+  width: 10px;
+  height: 16px;
+  border-radius: 80% 80% 95% 95%;
+  background: linear-gradient(180deg, #a7ddff 0%, #72bdf4 100%);
+}
+
 .edupet-floor {
   position: absolute;
   inset: auto 18px 18px;
@@ -372,34 +437,81 @@
   margin-top: 18px;
 }
 
-.mood-happy .edupet-beak {
-  clip-path: polygon(50% 100%, 6% 15%, 94% 15%);
+
+.edupet-pet.mood-happy .edupet-beak,
+.edupet-mini-pet.mood-happy {
+  filter: saturate(1.05);
 }
 
-.mood-curious .edupet-pet {
-  transform: rotate(-2deg);
+.edupet-pet.mood-happy .edupet-mouth {
+  border-bottom-width: 4px;
 }
 
-.mood-proud .edupet-pet {
+.edupet-pet.mood-curious,
+.edupet-mini-pet.mood-curious {
+  transform: rotate(-3deg);
+}
+
+.edupet-pet.mood-curious .edupet-eye:first-child {
+  transform: scale(1.25);
+}
+
+.edupet-pet.mood-proud,
+.edupet-mini-pet.mood-proud {
   animation: edupet-bounce 1.4s ease-in-out infinite;
 }
 
-.mood-sleepy .edupet-eye {
+.edupet-pet.mood-proud .edupet-effect.sparkle {
+  opacity: 0.95;
+  animation: edupet-sparkle 1.6s ease-in-out infinite;
+}
+
+.edupet-pet.mood-sleepy .edupet-eye,
+.edupet-mini-pet.mood-sleepy::before,
+.edupet-mini-pet.mood-sleepy::after {
   height: 5px;
   border-radius: 999px;
   margin-top: 8px;
 }
 
-.mood-sleepy .edupet-pet {
+.edupet-pet.mood-sleepy,
+.edupet-mini-pet.mood-sleepy {
   animation: edupet-droop 2.6s ease-in-out infinite;
 }
 
-.mood-worried .edupet-pet {
+.edupet-pet.mood-sleepy .edupet-mouth {
+  border-bottom: 0;
+  border-top: 4px solid #2f3568;
+  border-radius: 22px 22px 0 0;
+  top: 142px;
+}
+
+.edupet-pet.mood-worried,
+.edupet-mini-pet.mood-worried {
   animation: edupet-wobble 1.8s ease-in-out infinite;
 }
 
-.stage-scholar .edupet-pet::before,
-.stage-scholar .edupet-pet::after {
+.edupet-pet.mood-worried .edupet-effect.sweat {
+  opacity: 0.95;
+  animation: edupet-sweat 1.4s ease-in-out infinite;
+}
+
+.edupet-pet.mood-worried .edupet-mouth {
+  border-bottom: 0;
+  border-top: 4px solid #2f3568;
+  border-radius: 22px 22px 0 0;
+}
+
+.edupet-scene.is-reacting .edupet-pet {
+  animation: edupet-react-pop .45s ease;
+}
+
+.edupet-scene.is-reacting .edupet-bubble {
+  animation: edupet-react-bubble .55s ease;
+}
+
+.edupet-pet.stage-scholar::before,
+.edupet-pet.stage-scholar::after {
   background: linear-gradient(180deg, #e4dbff 0%, #bca7ff 100%);
 }
 
@@ -428,6 +540,29 @@
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(-2deg); }
   75% { transform: rotate(2deg); }
+}
+
+@keyframes edupet-sparkle {
+  0%, 100% { transform: scale(0.7); opacity: 0.3; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+
+@keyframes edupet-sweat {
+  0% { transform: translateY(0); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+
+@keyframes edupet-react-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@keyframes edupet-react-bubble {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
 }
 
 @media (max-width: 860px) {

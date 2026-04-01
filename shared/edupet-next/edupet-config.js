@@ -1,5 +1,5 @@
 (function () {
-  var VERSION = '0.2.0-alpha';
+  var VERSION = '0.3.0-alpha';
   var SELECTED_VERSION = window.EDUPET_SELECTED_VERSION || VERSION;
 
   window.EduPetConfig = {
@@ -24,16 +24,27 @@
       { id: 'scholar', minXp: 450 }
     ],
     events: {
-      session_start:     { energy: -1, curiosity: 2, xp: 2 },
-      session_end:       { confidence: 2, care: 1, xp: 3 },
-      task_completed:    { confidence: 4, knowledge: 3, xp: 8, coins: 1 },
-      retry_attempt:     { confidence: 2, curiosity: 1, energy: -1, xp: 3 },
-      improvement_made:  { confidence: 6, knowledge: 2, xp: 10, coins: 2 },
-      focus_minute:      { knowledge: 1, xp: 1, energy: -1 },
-      feed_pet:          { energy: 10, care: 2, xp: 1 },
-      tidy_room:         { cleanliness: 12, care: 3, xp: 1 },
-      encourage_pet:     { confidence: 2, care: 3, xp: 1 },
-      play_with_pet:     { energy: 3, curiosity: 3, care: 1, xp: 2 }
+      session_start:              { energy: -1, curiosity: 2, xp: 2 },
+      session_end:                { confidence: 2, care: 1, xp: 3 },
+      task_completed:             { confidence: 4, knowledge: 3, xp: 8, coins: 1 },
+      retry_attempt:              { confidence: 2, curiosity: 1, energy: -1, xp: 3 },
+      improvement_made:           { confidence: 6, knowledge: 2, xp: 10, coins: 2 },
+      focus_minute:               { knowledge: 1, xp: 1, energy: -1 },
+      feed_pet:                   { energy: 10, care: 2, xp: 1 },
+      tidy_room:                  { cleanliness: 12, care: 3, xp: 1 },
+      encourage_pet:              { confidence: 2, care: 3, xp: 1 },
+      play_with_pet:              { energy: 3, curiosity: 3, care: 1, xp: 2 },
+
+      idle_timeout:               { energy: -3, care: -2, xp: -2 },
+      task_abandoned:             { confidence: -3, care: -1, xp: -2 },
+      focus_lost:                 { curiosity: -1, knowledge: -1, xp: -1 },
+      rapid_switch:               { energy: -2, confidence: -1, xp: -2 },
+      guessing_pattern:           { confidence: -2, knowledge: -2, xp: -1 },
+      session_quit_early:         { care: -3, energy: -1, xp: -3 },
+
+      persisted_after_mistakes:   { confidence: 4, care: 1, xp: 6, coins: 1 },
+      completed_after_retry:      { confidence: 5, knowledge: 2, xp: 7, coins: 1 },
+      returned_after_break:       { energy: 2, confidence: 2, xp: 4 }
     },
     dailyDecay: {
       energy: -5,
@@ -100,7 +111,18 @@
       feed_pet: 'Yum. I feel brighter already.',
       tidy_room: 'Much better. This feels cosy.',
       encourage_pet: 'Thanks. I needed that.',
-      play_with_pet: 'That was fun.'
+      play_with_pet: 'That was fun.',
+
+      idle_timeout: 'I lost momentum. A quick restart helps.',
+      task_abandoned: 'That felt unfinished. Let us try a smaller step.',
+      focus_lost: 'I drifted a little. We can refocus gently.',
+      rapid_switch: 'Too many switches tired me out.',
+      guessing_pattern: 'Guessing is okay, but thinking helps me grow.',
+      session_quit_early: 'I missed finishing that session.',
+
+      persisted_after_mistakes: 'You kept going even after mistakes. I am proud.',
+      completed_after_retry: 'Retry complete! That persistence matters.',
+      returned_after_break: 'Welcome back. Returning is a big win.'
     },
     careLabels: {
       feed_pet: 'Feed',
