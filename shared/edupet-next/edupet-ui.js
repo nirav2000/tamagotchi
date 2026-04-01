@@ -104,6 +104,13 @@
     var widget = createEl('section', 'edupet-widget');
     var header = createEl('button', 'edupet-mini');
     var miniPet = createEl('div', 'edupet-mini-pet');
+    var miniEars = createEl('div', 'edupet-mini-ears');
+    var miniEyes = createEl('div', 'edupet-mini-eyes');
+    var miniEyeLeft = createEl('span', 'edupet-mini-eye');
+    var miniEyeRight = createEl('span', 'edupet-mini-eye');
+    var miniNose = createEl('div', 'edupet-mini-nose');
+    var miniMouth = createEl('div', 'edupet-mini-mouth');
+    var miniCheeks = createEl('div', 'edupet-mini-cheeks');
     var miniText = createEl('div', 'edupet-mini-text');
     var miniTitle = createEl('strong', '', 'EduPet');
     var miniMeta = createEl('div', 'edupet-mini-meta');
@@ -146,6 +153,15 @@
     miniMeta.appendChild(miniMood);
     miniText.appendChild(miniTitle);
     miniText.appendChild(miniMeta);
+
+    miniEyes.appendChild(miniEyeLeft);
+    miniEyes.appendChild(miniEyeRight);
+    miniPet.appendChild(miniEars);
+    miniPet.appendChild(miniEyes);
+    miniPet.appendChild(miniNose);
+    miniPet.appendChild(miniMouth);
+    miniPet.appendChild(miniCheeks);
+
     header.appendChild(miniPet);
     header.appendChild(miniText);
 

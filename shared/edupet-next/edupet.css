@@ -42,23 +42,116 @@
 .edupet-mini-pet::after {
   content: '';
   position: absolute;
-  top: 24px;
-  width: 8px;
-  height: 11px;
+  top: -5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px 6px 0 9px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.edupet-mini-pet::before { left: 10px; transform: rotate(-18deg); }
+.edupet-mini-pet::after { right: 10px; transform: scaleX(-1) rotate(-18deg); }
+
+.edupet-mini-pet::selection { background: transparent; }
+
+.edupet-mini-ears {
+  position: absolute;
+  inset: 0;
+}
+
+.edupet-mini-eyes {
+  position: absolute;
+  left: 50%;
+  top: 26px;
+  width: 34px;
+  margin-left: -17px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.edupet-mini-eye {
+  width: 6px;
+  height: 8px;
   background: #2f3568;
   border-radius: 50%;
 }
 
-.edupet-mini-pet::before { left: 22px; }
-.edupet-mini-pet::after { right: 22px; }
+.edupet-mini-nose {
+  position: absolute;
+  left: 50%;
+  top: 38px;
+  width: 9px;
+  height: 7px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: #ff9f42;
+}
 
-.edupet-mini-pet::selection { background: transparent; }
+.edupet-mini-mouth {
+  position: absolute;
+  left: 50%;
+  top: 46px;
+  width: 18px;
+  height: 10px;
+  margin-left: -9px;
+  border-bottom: 2px solid #2f3568;
+  border-radius: 0 0 14px 14px;
+}
 
-.edupet-mini-pet span { display: none; }
+.edupet-mini-cheeks {
+  position: absolute;
+  left: 50%;
+  top: 42px;
+  width: 38px;
+  height: 8px;
+  margin-left: -19px;
+}
 
+.edupet-mini-cheeks::before,
+.edupet-mini-cheeks::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 136, 156, 0.36);
+}
+
+.edupet-mini-cheeks::before { left: 0; }
+.edupet-mini-cheeks::after { right: 0; }
 
 .edupet-mini-pet.mood-happy {
   background: radial-gradient(circle at 35% 30%, #fff9d9 0%, #ffd86a 55%, #f5b73c 100%);
+}
+
+.edupet-mini-pet.mood-happy .edupet-mini-mouth {
+  border-bottom-width: 2px;
+}
+
+.edupet-mini-pet.mood-sleepy .edupet-mini-eye {
+  height: 2px;
+  margin-top: 4px;
+  border-radius: 999px;
+}
+
+.edupet-mini-pet.mood-sleepy .edupet-mini-mouth,
+.edupet-mini-pet.mood-worried .edupet-mini-mouth {
+  border-bottom: 0;
+  border-top: 2px solid #2f3568;
+  border-radius: 10px 10px 0 0;
+}
+
+.edupet-mini-pet.mood-curious .edupet-mini-eye:first-child {
+  transform: scale(1.22);
+}
+
+.edupet-mini-pet.mood-proud .edupet-mini-cheeks::before,
+.edupet-mini-pet.mood-proud .edupet-mini-cheeks::after {
+  background: rgba(255, 118, 170, 0.52);
+}
+
+.edupet-mini-pet.mood-worried .edupet-mini-nose {
+  filter: saturate(0.7);
 }
 
 .edupet-mini-pet.mood-sleepy {
