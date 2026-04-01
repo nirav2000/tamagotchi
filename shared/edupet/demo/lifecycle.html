@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduPet Lifecycle Demo</title>
+    <link rel="stylesheet" href="../edupet.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 24px;
+        background: #f6f8ff;
+        color: #1f2550;
+      }
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 18px;
+      }
+      .card {
+        border: 1px solid #d8defd;
+        border-radius: 18px;
+        background: white;
+        padding: 16px;
+        box-shadow: 0 10px 26px rgba(43, 57, 119, 0.08);
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      button, select {
+        border: 1px solid #cbd4ff;
+        background: white;
+        border-radius: 999px;
+        padding: 9px 12px;
+        cursor: pointer;
+      }
+      textarea, pre {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #d8defd;
+        border-radius: 14px;
+        background: #f8faff;
+        padding: 14px;
+      }
+      textarea { min-height: 100px; font-family: monospace; }
+      pre { min-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+      .minor { color: #5d6794; }
+      @media (max-width: 900px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>EduPet lifecycle demo</h1>
+      <p class="minor">This demo loads the lifecycle extension and shows egg-to-ghost lifecycle data alongside the standard widget.</p>
+
+      <div class="grid">
+        <section class="card">
+          <div id="petMount"></div>
+        </section>
+
+        <div style="display:grid; gap:18px;">
+          <section class="card">
+            <h2>Lifecycle events</h2>
+            <div class="controls" id="eventButtons"></div>
+            <div class="controls" style="margin-top:14px;">
+              <button id="rebirthButton" type="button">Rebirth</button>
+              <button id="resetButton" type="button">Reset</button>
+              <button id="exportButton" type="button">Export</button>
+            </div>
+            <textarea id="transferBox" placeholder="Exported JSON appears here. Paste JSON and use browser console with EduPet.importState(...) if needed."></textarea>
+          </section>
+
+          <section class="card">
+            <h2>Lifecycle summary</h2>
+            <pre id="summaryBox"></pre>
+          </section>
+
+          <section class="card">
+            <h2>Full state</h2>
+            <pre id="stateBox"></pre>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <script src="../edupet-config.js"></script>
+    <script src="../edupet-lifecycle.js"></script>
+    <script src="../edupet-storage.js"></script>
+    <script src="../edupet-core.js"></script>
+    <script src="../edupet-ui.js"></script>
+    <script>
+      (function () {
+        var EVENTS = [
+          'session_start',
+          'task_completed',
+          'retry_attempt',
+          'improvement_made',
+          'focus_minute',
+          'feed_pet',
+          'tidy_room',
+          'encourage_pet',
+          'play_with_pet',
+          'idle_timeout',
+          'task_abandoned',
+          'focus_lost',
+          'rapid_switch',
+          'guessing_pattern',
+          'session_quit_early',
+          'persisted_after_mistakes',
+          'completed_after_retry',
+          'returned_after_break'
+        ];
+
+        function refresh() {
+          document.getElementById('summaryBox').textContent = JSON.stringify(window.EduPet.getLifecycleSummary(), null, 2);
+          document.getElementById('stateBox').textContent = JSON.stringify(window.EduPet.getState(), null, 2);
+        }
+
+        function setupButtons() {
+          var wrap = document.getElementById('eventButtons');
+          EVENTS.forEach(function (eventName) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = eventName;
+            btn.addEventListener('click', function () {
+              window.EduPet.recordEvent({ type: eventName, appId: 'lifecycle-demo', value: 1 });
+            });
+            wrap.appendChild(btn);
+          });
+        }
+
+        window.EduPetUI.render(document.getElementById('petMount'));
+        setupButtons();
+        refresh();
+        window.EduPet.onChange(refresh);
+
+        document.getElementById('rebirthButton').addEventListener('click', function () {
+          window.EduPet.rebirth();
+        });
+        document.getElementById('resetButton').addEventListener('click', function () {
+          window.EduPet.reset();
+        });
+        document.getElementById('exportButton').addEventListener('click', function () {
+          document.getElementById('transferBox').value = window.EduPet.exportState();
+        });
+      })();
+    </script>
+  </body>
+</html>
