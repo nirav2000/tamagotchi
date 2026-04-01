@@ -27,6 +27,15 @@
     return row;
   }
 
+
+  function getReactionGroup(eventType) {
+    if (!eventType) return '';
+    if (eventType === 'feed_pet' || eventType === 'tidy_room' || eventType === 'encourage_pet' || eventType === 'play_with_pet') return 'react-care';
+    if (eventType === 'persisted_after_mistakes' || eventType === 'completed_after_retry' || eventType === 'returned_after_break') return 'react-recovery';
+    if (eventType === 'idle_timeout' || eventType === 'task_abandoned' || eventType === 'focus_lost' || eventType === 'rapid_switch' || eventType === 'guessing_pattern' || eventType === 'session_quit_early') return 'react-negative';
+    return 'react-learning';
+  }
+
   function refresh(state) {
     if (!rootElements) return;
 
@@ -39,7 +48,7 @@
     var miniStage = rootElements.miniStage;
     var miniMood = rootElements.miniMood;
 
-    pet.className = 'edupet-pet mood-' + state.expression + ' stage-' + state.stage;
+    pet.className = 'edupet-pet mood-' + state.expression + ' stage-' + state.stage + (rootElements.reactionGroup ? ' ' + rootElements.reactionGroup : '');
     rootElements.miniPet.className = 'edupet-mini-pet mood-' + state.expression + ' stage-' + state.stage;
     bubble.textContent = state.lastMessage || 'Hello.';
     mood.textContent = 'Mood: ' + state.mood;
@@ -61,15 +70,19 @@
 
     if (state.lastEventAt && state.lastEventAt !== lastReactionAt) {
       lastReactionAt = state.lastEventAt;
+      rootElements.reactionGroup = getReactionGroup(state.lastEvent);
       rootElements.scene.classList.remove('is-reacting');
       rootElements.scene.offsetHeight;
       rootElements.scene.classList.add('is-reacting');
+      pet.className = 'edupet-pet mood-' + state.expression + ' stage-' + state.stage + (rootElements.reactionGroup ? ' ' + rootElements.reactionGroup : '');
       clearTimeout(rootElements.reactionTimer);
       rootElements.reactionTimer = setTimeout(function () {
         if (rootElements && rootElements.scene) {
+          rootElements.reactionGroup = '';
           rootElements.scene.classList.remove('is-reacting');
+          rootElements.pet.className = 'edupet-pet mood-' + state.expression + ' stage-' + state.stage;
         }
-      }, 900);
+      }, 1200);
     }
   }
 
@@ -201,7 +214,8 @@
       miniMood: miniMood,
       xp: xpBadge,
       coins: coinsBadge,
-      reactionTimer: null
+      reactionTimer: null,
+      reactionGroup: ''
     };
 
     header.addEventListener('click', function () {

@@ -56,6 +56,27 @@
 
 .edupet-mini-pet span { display: none; }
 
+
+.edupet-mini-pet.mood-happy {
+  background: radial-gradient(circle at 35% 30%, #fff9d9 0%, #ffd86a 55%, #f5b73c 100%);
+}
+
+.edupet-mini-pet.mood-sleepy {
+  background: radial-gradient(circle at 35% 30%, #f7f0c4 0%, #d7c78e 55%, #b49f67 100%);
+}
+
+.edupet-mini-pet.mood-worried {
+  background: radial-gradient(circle at 35% 30%, #ffdfe5 0%, #f8a7b5 55%, #e57a8f 100%);
+}
+
+.edupet-mini-pet.mood-proud {
+  background: radial-gradient(circle at 35% 30%, #f3ebff 0%, #ccb6ff 55%, #9b7ff5 100%);
+}
+
+.edupet-mini-pet.mood-curious {
+  background: radial-gradient(circle at 35% 30%, #dff9ff 0%, #9ce7ff 55%, #67c6ff 100%);
+}
+
 .edupet-mini-text strong {
   display: block;
   font-size: 1rem;
@@ -508,6 +529,28 @@
 
 .edupet-scene.is-reacting .edupet-bubble {
   animation: edupet-react-bubble .55s ease;
+}
+
+.edupet-pet.react-care .edupet-effect.sparkle {
+  opacity: 1;
+  animation: edupet-sparkle .8s ease-in-out 2;
+}
+
+.edupet-pet.react-negative {
+  animation: edupet-wobble .45s ease-in-out 2;
+}
+
+.edupet-pet.react-negative .edupet-effect.sweat {
+  opacity: 1;
+  animation: edupet-sweat .7s ease-in-out 2;
+}
+
+.edupet-pet.react-recovery {
+  animation: edupet-bounce .6s ease-in-out 2;
+}
+
+.edupet-pet.react-learning .edupet-eye {
+  animation: edupet-blink .8s ease-in-out 2;
 }
 
 .edupet-pet.stage-scholar::before,
