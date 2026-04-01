@@ -7,48 +7,101 @@
     return new Date().toISOString();
   }
 
+  function getDayKey(dateInput) {
+    var date = dateInput ? new Date(dateInput) : new Date();
+    return date.toISOString().slice(0, 10);
+  }
+
   function buildStarterState(config) {
     var state = clone(config.initialState);
     var ts = nowISO();
     state.createdAt = ts;
     state.updatedAt = ts;
+    state.lastDecayAt = ts;
+    state.daily.dayKey = getDayKey(ts);
+    state.daily.counts = {};
     return state;
   }
 
-  function load(config) {
-    var raw = localStorage.getItem(config.storageKey);
-    if (!raw) return buildStarterState(config);
-
+  function safeParse(raw) {
     try {
-      return normalize(JSON.parse(raw), config);
+      return JSON.parse(raw);
     } catch (err) {
-      return buildStarterState(config);
+      return null;
     }
+  }
+
+  function mergeDeep(target, source) {
+    var key;
+    for (key in source) {
+      if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+          target[key] = {};
+        }
+        mergeDeep(target[key], source[key]);
+      } else {
+        target[key] = source[key];
+      }
+    }
+    return target;
   }
 
   function normalize(state, config) {
     var merged = clone(config.initialState);
+    var safeState = state && typeof state === 'object' ? state : {};
+    var bounds = config.statBounds;
     var key;
+    mergeDeep(merged, safeState);
 
-    if (!state || typeof state !== 'object') return buildStarterState(config);
-
-    for (key in merged) {
-      if (Object.prototype.hasOwnProperty.call(state, key)) {
-        merged[key] = state[key];
-      }
+    if (!Array.isArray(merged.history)) {
+      merged.history = [];
+    }
+    if (!merged.perApp || typeof merged.perApp !== 'object' || Array.isArray(merged.perApp)) {
+      merged.perApp = {};
+    }
+    if (!merged.totals || typeof merged.totals !== 'object' || Array.isArray(merged.totals)) {
+      merged.totals = clone(config.initialState.totals);
+    }
+    if (!merged.daily || typeof merged.daily !== 'object' || Array.isArray(merged.daily)) {
+      merged.daily = clone(config.initialState.daily);
+    }
+    if (!merged.daily.counts || typeof merged.daily.counts !== 'object' || Array.isArray(merged.daily.counts)) {
+      merged.daily.counts = {};
     }
 
     if (!merged.createdAt) merged.createdAt = nowISO();
     if (!merged.updatedAt) merged.updatedAt = nowISO();
-    if (!Array.isArray(merged.history)) merged.history = [];
-    if (!merged.perApp || typeof merged.perApp !== 'object') merged.perApp = {};
+    if (!merged.lastDecayAt) merged.lastDecayAt = merged.updatedAt;
+    if (!merged.daily.dayKey) merged.daily.dayKey = getDayKey(merged.updatedAt);
 
+    for (key in bounds) {
+      if (!Object.prototype.hasOwnProperty.call(bounds, key)) continue;
+      if (typeof merged[key] !== 'number' || isNaN(merged[key])) {
+        merged[key] = config.initialState[key] || 0;
+      }
+      merged[key] = Math.max(bounds[key].min, Math.min(bounds[key].max, merged[key]));
+    }
+
+    merged.history = merged.history.slice(-60);
     return merged;
+  }
+
+  function load(config) {
+    var raw = localStorage.getItem(config.storageKey);
+    if (!raw) {
+      return buildStarterState(config);
+    }
+    var parsed = safeParse(raw);
+    if (!parsed) {
+      return buildStarterState(config);
+    }
+    return normalize(parsed, config);
   }
 
   function save(state, config) {
     state.updatedAt = nowISO();
-    localStorage.setItem(config.storageKey, JSON.stringify(state));
+    localStorage.setItem(config.storageKey, JSON.stringify(normalize(state, config)));
     return state;
   }
 
@@ -58,13 +111,15 @@
     return starter;
   }
 
-  function exportState(config) {
-    var state = load(config);
-    return JSON.stringify(state, null, 2);
+  function exportState(state, config) {
+    return JSON.stringify(normalize(state, config), null, 2);
   }
 
-  function importState(raw, config) {
-    var parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  function importState(input, config) {
+    var parsed = typeof input === 'string' ? safeParse(input) : input;
+    if (!parsed) {
+      return null;
+    }
     var normalized = normalize(parsed, config);
     save(normalized, config);
     return normalized;
@@ -76,6 +131,8 @@
     reset: reset,
     normalize: normalize,
     exportState: exportState,
-    importState: importState
+    importState: importState,
+    buildStarterState: buildStarterState,
+    getDayKey: getDayKey
   };
 })();
