@@ -459,9 +459,38 @@
 }
 
 
+
+.edupet-pet.mood-happy {
+  background: radial-gradient(circle at 36% 28%, #fff8cb 0%, #ffd65e 50%, #f3b53d 100%);
+}
+
+.edupet-pet.mood-sleepy {
+  background: radial-gradient(circle at 36% 28%, #f5edd1 0%, #d7c189 50%, #a78857 100%);
+}
+
+.edupet-pet.mood-worried {
+  background: radial-gradient(circle at 36% 28%, #ffe4e8 0%, #f6a5b3 50%, #de6f88 100%);
+}
+
+.edupet-pet.mood-proud {
+  background: radial-gradient(circle at 36% 28%, #f3ebff 0%, #ccb6ff 50%, #9876ef 100%);
+}
+
+.edupet-pet.mood-curious {
+  background: radial-gradient(circle at 36% 28%, #dcf8ff 0%, #98e4ff 50%, #5cbcff 100%);
+}
+
 .edupet-pet.mood-happy .edupet-beak,
 .edupet-mini-pet.mood-happy {
   filter: saturate(1.05);
+}
+
+.edupet-pet.mood-worried .edupet-beak {
+  filter: saturate(0.75);
+}
+
+.edupet-pet.mood-sleepy .edupet-blush {
+  opacity: 0.2;
 }
 
 .edupet-pet.mood-happy .edupet-mouth {
