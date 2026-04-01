@@ -1,0 +1,931 @@
+Here is a solid **v1 plan** for a shared Tamagotchi-style companion system for your education apps.
+
+## Core idea
+
+Build one shared pet system that any app can plug into.
+
+Each education app sends events such as:
+
+* session started
+* task completed
+* retry made
+* improvement achieved
+* focused time spent
+
+The pet system turns those into:
+
+* mood
+* animation
+* growth
+* unlocks
+* short messages
+* room/accessory changes
+
+The pet should reward **effort, consistency, courage, and improvement**, not just raw accuracy.
+
+---
+
+# 1. Product definition
+
+## Working name
+
+Use a neutral internal name first:
+
+**EduPet**
+
+You can rename the visible brand later.
+
+## Purpose
+
+Create a shared companion that:
+
+* increases return visits
+* makes progress feel alive
+* connects multiple apps together
+* rewards trying hard, not just getting everything right
+* gives a child a reason to care about progress
+
+## Tone
+
+Keep it warm and encouraging.
+
+Avoid:
+
+* death
+* guilt
+* harsh punishments
+* manipulative streak pressure
+
+Use states like:
+
+* sleepy
+* curious
+* proud
+* playful
+* needing care
+* excited
+
+---
+
+# 2. Best v1 architecture
+
+Because your apps are simple, browser-based, and GitHub Pages friendly, build this in **plain vanilla JS**.
+
+## Recommended structure
+
+```text
+/shared/edupet/
+  edupet-core.js
+  edupet-ui.js
+  edupet-storage.js
+  edupet-config.js
+  edupet.css
+  assets/
+    pet/
+      bird-base.svg
+      eyes-happy.svg
+      eyes-sleepy.svg
+      mouth-smile.svg
+      accessory-book.svg
+      accessory-hat.svg
+    room/
+      bg-day.svg
+      bg-night.svg
+  demo/
+    index.html
+```
+
+## What each file does
+
+### `edupet-core.js`
+
+The brain:
+
+* receives app events
+* updates stats
+* calculates mood
+* handles unlocks and progression
+
+### `edupet-storage.js`
+
+The memory:
+
+* load state
+* save state
+* reset state
+* export/import JSON
+
+### `edupet-ui.js`
+
+The renderer:
+
+* small widget
+* expanded panel
+* messages
+* feed/play/clean buttons
+* animation state classes
+
+### `edupet-config.js`
+
+The rules:
+
+* stat caps
+* event values
+* growth thresholds
+* unlock tables
+* decay settings
+
+### `edupet.css`
+
+The look:
+
+* widget styling
+* panel styling
+* idle animation
+* bounce/blink states
+
+---
+
+# 3. Data model
+
+Keep the schema small and stable.
+
+## Suggested v1 save schema
+
+```json
+{
+  "version": 1,
+  "pet": {
+    "id": "pet-001",
+    "name": "Pip",
+    "species": "bluebird",
+    "stage": "baby",
+    "mood": "curious",
+    "energy": 72,
+    "confidence": 45,
+    "curiosity": 61,
+    "care": 58,
+    "knowledge": 39,
+    "coins": 120,
+    "xp": 260,
+    "lastUpdated": "2026-04-01T14:00:00.000Z"
+  },
+  "room": {
+    "theme": "starter",
+    "cleanliness": 76,
+    "decor": ["plant-small"]
+  },
+  "inventory": {
+    "accessories": ["red-hat", "book-bag"],
+    "food": ["seed-pack"],
+    "stickers": ["gold-star-1"]
+  },
+  "unlocks": {
+    "stages": ["egg", "baby"],
+    "items": ["red-hat", "plant-small"],
+    "messages": ["intro-1"]
+  },
+  "stats": {
+    "totalSessions": 14,
+    "totalMinutes": 135,
+    "totalTasksCompleted": 52,
+    "totalRetries": 18,
+    "totalImprovements": 9
+  },
+  "perApp": {
+    "reading-app": {
+      "sessions": 8,
+      "minutes": 72,
+      "tasksCompleted": 31
+    },
+    "spelling-app": {
+      "sessions": 6,
+      "minutes": 63,
+      "tasksCompleted": 21
+    }
+  },
+  "history": []
+}
+```
+
+---
+
+# 4. Pet stats
+
+Do not have too many. Five is enough.
+
+## Recommended stats
+
+### Energy
+
+Filled by:
+
+* showing up
+* doing focused work
+* completing sessions
+
+### Confidence
+
+Filled by:
+
+* retrying
+* correcting mistakes
+* completing harder tasks
+* improving score
+
+### Curiosity
+
+Filled by:
+
+* reading
+* exploring optional tasks
+* trying new content
+* completing variety
+
+### Care
+
+Filled by:
+
+* check-ins
+* caring actions
+* feeding/tidying/encouraging
+* regular but gentle engagement
+
+### Knowledge
+
+Long-term stat.
+Filled by:
+
+* completed tasks
+* mastery gains
+* cumulative learning activity
+
+---
+
+# 5. Growth stages
+
+Keep v1 simple.
+
+## Recommended stages
+
+* egg
+* baby
+* child
+* explorer
+* scholar
+
+## Growth rule
+
+Growth should depend on a mix of:
+
+* total XP
+* confidence minimum
+* curiosity minimum
+* care minimum
+
+So the pet cannot level up only from grinding one action.
+
+Example:
+
+* `egg -> baby`: 50 XP
+* `baby -> child`: 200 XP and care >= 30
+* `child -> explorer`: 450 XP and confidence >= 40 and curiosity >= 40
+* `explorer -> scholar`: 900 XP and all core stats >= 55
+
+---
+
+# 6. Mood system
+
+Mood is what the user sees most often, so keep it readable.
+
+## v1 moods
+
+* happy
+* curious
+* sleepy
+* proud
+* worried
+* playful
+
+## Mood logic example
+
+Highest-priority checks first:
+
+* energy < 20 → sleepy
+* care < 20 → worried
+* recent improvement event → proud
+* recent optional challenge completed → playful
+* curiosity > 60 → curious
+* default → happy
+
+That gives visible variety without needing AI.
+
+---
+
+# 7. Events API
+
+This is the most important part.
+
+Every app should send events in one standard format.
+
+## Event format
+
+```js
+EduPet.recordEvent({
+  appId: 'reading-app',
+  type: 'task_completed',
+  value: 1,
+  meta: {
+    difficulty: 'medium',
+    topic: 'inference'
+  },
+  timestamp: Date.now()
+});
+```
+
+## Recommended v1 event list
+
+### Session events
+
+* `session_start`
+* `session_end`
+* `focus_minute`
+
+### Progress events
+
+* `task_completed`
+* `challenge_completed`
+* `improvement_made`
+* `mastery_gain`
+
+### Resilience events
+
+* `retry_attempt`
+* `mistake_corrected`
+
+### Accuracy events
+
+* `correct_answer`
+* `incorrect_answer`
+
+### Optional care events
+
+* `feed_pet`
+* `tidy_room`
+* `encourage_pet`
+* `play_with_pet`
+
+### Exploration events
+
+* `new_topic_tried`
+* `optional_activity_done`
+
+---
+
+# 8. Reward logic
+
+This is where many systems go wrong.
+
+## Good rule set
+
+### Reward heavily
+
+* finishing a proper session
+* completing meaningful tasks
+* retrying after mistakes
+* visible improvement
+* trying something challenging
+
+### Reward lightly
+
+* individual correct answers
+* repeated easy actions
+* rapid taps
+
+### Barely reward
+
+* passive screen time
+* spam clicks
+
+## Suggested base values
+
+```js
+const EVENT_VALUES = {
+  session_start:      { energy: 2, care: 1, xp: 2 },
+  session_end:        { confidence: 2, xp: 4 },
+  focus_minute:       { energy: 1, knowledge: 1, xp: 1 },
+
+  task_completed:     { confidence: 3, knowledge: 3, xp: 8 },
+  challenge_completed:{ confidence: 5, curiosity: 4, xp: 14 },
+  improvement_made:   { confidence: 6, xp: 12 },
+  mastery_gain:       { knowledge: 5, confidence: 3, xp: 10 },
+
+  retry_attempt:      { confidence: 2, care: 1, xp: 4 },
+  mistake_corrected:  { confidence: 4, xp: 6 },
+
+  correct_answer:     { knowledge: 1, xp: 1 },
+  incorrect_answer:   { xp: 0 },
+
+  new_topic_tried:    { curiosity: 4, xp: 5 },
+  optional_activity_done: { curiosity: 3, care: 1, xp: 4 },
+
+  feed_pet:           { care: 3, xp: 1 },
+  tidy_room:          { care: 4, xp: 1 },
+  encourage_pet:      { care: 2, confidence: 1, xp: 1 },
+  play_with_pet:      { energy: 2, care: 2, xp: 1 }
+};
+```
+
+---
+
+# 9. Anti-grind rules
+
+You need this from the start.
+
+## Add these protections
+
+### Diminishing returns
+
+After, say, 20 `correct_answer` events in a session, reduce reward sharply.
+
+### Session quality bonus
+
+Give a completion bonus only if:
+
+* session lasts at least 5 minutes
+* at least 1 meaningful task completed
+
+### Variety bonus
+
+Reward using different apps or different skill types.
+
+### Retry bonus cap
+
+Retries should help, but repeated failure farming should not.
+
+### Daily soft cap
+
+Let the first 20–30 meaningful minutes matter most.
+
+This keeps the system fair and not exploitable.
+
+---
+
+# 10. Decay and absence
+
+Make absence gentle.
+
+## Recommended v1 decay
+
+Once every 24 hours:
+
+* energy: -5
+* care: -3
+* room cleanliness: -4
+
+Do **not** reduce knowledge.
+Do **not** make the pet miserable after a missed day.
+
+The pet should feel like:
+“Come back and help me”
+not
+“You failed me”
+
+---
+
+# 11. UI components
+
+## v1 UI pieces
+
+### A. Mini widget
+
+Shown inside each app.
+
+Contains:
+
+* pet face/body
+* mood icon
+* tiny speech bubble
+* tap to open
+
+### B. Expanded panel
+
+Contains:
+
+* larger pet
+* stat bars
+* room area
+* accessory slot
+* care buttons
+* latest progress message
+
+### C. Reward toast
+
+Small popup after meaningful progress:
+
+* “Pip looks proud of you”
+* “Pip learned something new”
+* “Pip found a tiny book”
+
+---
+
+# 12. Visual style
+
+For your apps, I would not start with traditional pixel art.
+
+## Better v1 style
+
+Use simple SVG illustration.
+
+Why:
+
+* lighter
+* scalable
+* looks cleaner on iPad/browser
+* easier to recolour
+* easier to animate with CSS
+* simpler for multiple app themes
+
+## Animation list
+
+Only a few are needed:
+
+* idle bob
+* blink
+* happy bounce
+* sleepy droop
+* proud sparkle
+* worried wobble
+
+---
+
+# 13. Cross-app integration
+
+Each app only needs 3 things:
+
+## A. Include the scripts
+
+```html
+<link rel="stylesheet" href="/shared/edupet/edupet.css">
+<script src="/shared/edupet/edupet-config.js"></script>
+<script src="/shared/edupet/edupet-storage.js"></script>
+<script src="/shared/edupet/edupet-core.js"></script>
+<script src="/shared/edupet/edupet-ui.js"></script>
+```
+
+## B. Add a pet mount point
+
+```html
+<div id="edupet-widget"></div>
+```
+
+## C. Send events
+
+```js
+EduPet.init({ appId: 'reading-app' });
+EduPet.mount('#edupet-widget');
+
+EduPet.recordEvent({ appId: 'reading-app', type: 'session_start' });
+EduPet.recordEvent({ appId: 'reading-app', type: 'task_completed', value: 1 });
+EduPet.recordEvent({ appId: 'reading-app', type: 'retry_attempt', value: 1 });
+EduPet.recordEvent({ appId: 'reading-app', type: 'session_end' });
+```
+
+---
+
+# 14. Public API shape
+
+This is a clean v1 API.
+
+```js
+EduPet.init(options)
+EduPet.getState()
+EduPet.save()
+EduPet.reset()
+EduPet.importState(json)
+EduPet.exportState()
+
+EduPet.recordEvent(event)
+EduPet.recordEvents(eventsArray)
+
+EduPet.mount(selectorOrElement)
+EduPet.openPanel()
+EduPet.closePanel()
+EduPet.refreshUI()
+
+EduPet.feed()
+EduPet.tidy()
+EduPet.encourage()
+EduPet.play()
+```
+
+---
+
+# 15. Message system
+
+The pet needs short expressive lines.
+
+## v1 message categories
+
+### After progress
+
+* “I think we’re getting better.”
+* “That was brave.”
+* “You kept going.”
+* “I learned something with you.”
+
+### After improvement
+
+* “You did better that time.”
+* “I’m proud of that effort.”
+* “That felt like progress.”
+
+### Low energy
+
+* “A short session would help.”
+* “Want to do a little more together?”
+
+### Unlocks
+
+* “I found a tiny red hat.”
+* “Our room feels nicer already.”
+
+Keep messages short and not too sugary.
+
+---
+
+# 16. Unlock system
+
+Do not overload v1.
+
+## v1 unlock types
+
+* accessories
+* room decorations
+* background themes
+* sticker badges
+* alternative idle animations
+
+## Example unlock triggers
+
+* 3 meaningful sessions → plant
+* 5 retries across separate days → bravery ribbon
+* 50 completed tasks → book accessory
+* 3 different apps used → explorer hat
+* 7 days with gentle engagement → room shelf
+
+This ties the pet to educational behaviour.
+
+---
+
+# 17. Storage strategy
+
+## Best v1
+
+Use `localStorage`.
+
+That gives:
+
+* zero backend
+* easy GitHub Pages deployment
+* simple testing
+
+## Save key format
+
+Use something like:
+
+```js
+const STORAGE_KEY = 'edupet.v1.profile';
+```
+
+## Later upgrade path
+
+When ready:
+
+* Firebase sync
+* user accounts
+* backup/export
+* cross-device sync
+
+But keep v1 local-first.
+
+---
+
+# 18. Recommended development phases
+
+## Phase 1 — rules and schema
+
+Finish:
+
+* event list
+* stat list
+* save schema
+* growth thresholds
+* mood logic
+
+## Phase 2 — engine
+
+Build:
+
+* state creation
+* event processing
+* decay processing
+* save/load
+* unlock checks
+
+## Phase 3 — UI
+
+Build:
+
+* mini widget
+* expanded panel
+* stat bars
+* care actions
+* simple animations
+
+## Phase 4 — demo app
+
+Create one sample HTML page that simulates:
+
+* reading session
+* task completion
+* retry
+* improvement
+* unlocks
+
+## Phase 5 — integrate
+
+Plug into one real app first.
+Best candidate: the reading or spelling app.
+
+## Phase 6 — balancing
+
+Check:
+
+* too easy?
+* too grindy?
+* too distracting?
+* too punitive?
+* too noisy in the UI?
+
+---
+
+# 19. Best first app to integrate with
+
+Start with the app where effort is easiest to measure well.
+
+Good choices:
+
+* reading comprehension app
+* spelling/grammar practice app
+
+Avoid starting with an app where signals are noisy or overly passive.
+
+---
+
+# 20. What success looks like
+
+You will know it is working when:
+
+* users check back to see the pet
+* the pet feels linked to effort, not random taps
+* it makes sessions feel warmer
+* it does not distract from learning
+* the same pet appears across apps and creates continuity
+
+---
+
+# 21. What not to build in v1
+
+Leave these out for now:
+
+* multiplayer pets
+* battles
+* complex mini-games
+* harsh streak systems
+* monetisation logic
+* large inventories
+* AI-generated dialogue
+* backend accounts
+* too many species
+
+Keep v1 very controlled.
+
+---
+
+# 22. Suggested v1 build brief for Codex
+
+Paste this into Codex:
+
+```text
+Build a vanilla JavaScript shared pet library called EduPet for browser-based education apps hosted on GitHub Pages.
+
+Requirements:
+- No frameworks
+- No build step
+- Plain HTML/CSS/JS
+- Modular files
+- SVG-based pet visuals
+- localStorage persistence
+- Clean readable code
+
+Create these files:
+/shared/edupet/edupet-core.js
+/shared/edupet/edupet-storage.js
+/shared/edupet/edupet-config.js
+/shared/edupet/edupet-ui.js
+/shared/edupet/edupet.css
+/shared/edupet/demo/index.html
+
+Features:
+- One pet with stats: energy, confidence, curiosity, care, knowledge, xp, coins
+- Growth stages: egg, baby, child, explorer, scholar
+- Moods: happy, curious, sleepy, proud, worried, playful
+- Event API: EduPet.recordEvent({ appId, type, value, meta, timestamp })
+- Support events:
+  session_start
+  session_end
+  focus_minute
+  task_completed
+  challenge_completed
+  improvement_made
+  mastery_gain
+  retry_attempt
+  mistake_corrected
+  correct_answer
+  incorrect_answer
+  new_topic_tried
+  optional_activity_done
+  feed_pet
+  tidy_room
+  encourage_pet
+  play_with_pet
+
+Core behaviour:
+- Process events into stat changes using config rules
+- Apply anti-grind logic with diminishing returns
+- Apply gentle daily decay to energy, care, and room cleanliness
+- Save and load profile from localStorage
+- Support export/import JSON
+- Unlock simple accessories and room decorations based on milestones
+- Maintain per-app stats and totals
+
+UI:
+- Small floating/minimal widget mountable into any app
+- Expanded panel on click/tap
+- Stat bars
+- Pet SVG
+- Mood display
+- Short message area
+- Buttons for feed, tidy, encourage, play
+- Light CSS animations for idle, blink, bounce, sleepy
+
+Public API:
+- EduPet.init(options)
+- EduPet.mount(selectorOrElement)
+- EduPet.getState()
+- EduPet.recordEvent(event)
+- EduPet.recordEvents(eventsArray)
+- EduPet.save()
+- EduPet.reset()
+- EduPet.importState(json)
+- EduPet.exportState()
+- EduPet.openPanel()
+- EduPet.closePanel()
+- EduPet.refreshUI()
+- EduPet.feed()
+- EduPet.tidy()
+- EduPet.encourage()
+- EduPet.play()
+
+Demo page:
+- Show widget and panel
+- Include buttons to simulate all event types
+- Show raw JSON state
+- Show unlocks and history
+- Include reset/export/import
+
+Code style:
+- Keep everything production-friendly
+- Comment clearly
+- Avoid placeholders
+- Make the API easy to integrate into other education apps
+- Keep visuals clean and child-friendly but not babyish
+```
+
+---
+
+# 23. My recommendation for the very next step
+
+Build the **demo library first**, before integrating it into a real app.
+
+That gives you:
+
+* the rules
+* the feel
+* the balance
+* the shared API
+
+Once that works, plugging it into the other apps becomes straightforward.
+
+I can next draft the **exact file-by-file implementation plan**, including what should go into each JS file and the order Codex should build them.
