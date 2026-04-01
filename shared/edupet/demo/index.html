@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduPet Demo</title>
+    <link rel="stylesheet" href="../edupet.css" />
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; background: #f6f8ff; color: #1f2550; }
+      main { max-width: 920px; margin: 0 auto; }
+      .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 20px; }
+      .controls button { border: 1px solid #c9d0ff; background: white; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+      #versionFooter { margin-top: 26px; color: #5b6396; }
+      #versionLink { color: #4054ff; text-decoration: underline; cursor: pointer; font-weight: 700; }
+      .modal-backdrop { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(20,23,45,.45); }
+      .modal-backdrop.open { display: flex; }
+      .modal { width: min(760px, 92vw); max-height: 82vh; overflow: auto; background: white; border-radius: 16px; padding: 20px; box-shadow: 0 16px 50px rgba(0,0,0,.25); }
+      .version-list button { margin: 0 8px 8px 0; border: 1px solid #ccd3ff; background: #f9faff; border-radius: 8px; padding: 6px 9px; cursor: pointer; }
+      #historyContent h1, #historyContent h2, #historyContent h3 { margin: 0.7em 0 0.35em; }
+      #historyContent ul { margin-top: 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>EduPet MVP Demo</h1>
+      <p>Send events from an app and watch one shared pet state update instantly.</p>
+
+      <div class="controls" id="eventButtons"></div>
+      <button id="resetState">Reset Pet</button>
+
+      <div id="petMount" style="margin-top: 16px"></div>
+
+      <footer id="versionFooter">
+        Version: <a id="versionLink">0.1.0</a>
+      </footer>
+    </main>
+
+    <div class="modal-backdrop" id="historyModal" aria-hidden="true">
+      <div class="modal">
+        <button id="closeModal" style="float:right">Close</button>
+        <h2>Version History</h2>
+        <div class="version-list" id="versionList"></div>
+        <article id="historyContent"></article>
+      </div>
+    </div>
+
+    <script src="../edupet-config.js"></script>
+    <script src="../edupet-storage.js"></script>
+    <script src="../edupet-core.js"></script>
+    <script src="../edupet-ui.js"></script>
+    <script>
+      (function () {
+        var EVENTS = [
+          'session_start', 'session_end', 'task_completed', 'retry_attempt', 'improvement_made',
+          'focus_minute', 'feed_pet', 'tidy_room', 'encourage_pet', 'play_with_pet'
+        ];
+
+        var VERSION_ARCHIVE = {
+          '0.1.0': {
+            markdown: '# EduPet 0.1.0\n\n## Highlights\n- First MVP release\n- Shared one-pet state\n- localStorage persistence\n- Event-driven updates\n\n## Notes\n- GitHub Pages compatible (plain HTML/CSS/JS).'
+          }
+        };
+
+        function renderMarkdown(md) {
+          return md
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/^- (.*$)/gim, '<li>$1</li>')
+            .replace(/\n\n/g, '<br/><br/>')
+            .replace(/(<li>.*<\/li>)/gims, '<ul>$1</ul>');
+        }
+
+        function setupVersionModal() {
+          var modal = document.getElementById('historyModal');
+          var openLink = document.getElementById('versionLink');
+          var close = document.getElementById('closeModal');
+          var list = document.getElementById('versionList');
+          var content = document.getElementById('historyContent');
+
+          Object.keys(VERSION_ARCHIVE).sort().reverse().forEach(function (ver) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = ver;
+            btn.addEventListener('click', function () {
+              document.getElementById('versionLink').textContent = ver;
+              content.innerHTML = renderMarkdown(VERSION_ARCHIVE[ver].markdown);
+            });
+            list.appendChild(btn);
+          });
+
+          content.innerHTML = renderMarkdown(VERSION_ARCHIVE['0.1.0'].markdown);
+
+          openLink.addEventListener('click', function () { modal.classList.add('open'); });
+          close.addEventListener('click', function () { modal.classList.remove('open'); });
+          modal.addEventListener('click', function (e) {
+            if (e.target === modal) modal.classList.remove('open');
+          });
+        }
+
+        function setupEventButtons() {
+          var wrap = document.getElementById('eventButtons');
+          EVENTS.forEach(function (eventName) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = eventName;
+            btn.addEventListener('click', function () { window.EduPet.recordEvent(eventName); });
+            wrap.appendChild(btn);
+          });
+        }
+
+        window.EduPetUI.render(document.getElementById('petMount'));
+        setupEventButtons();
+        setupVersionModal();
+
+        document.getElementById('resetState').addEventListener('click', function () {
+          window.EduPet.reset();
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,73 @@
+:root {
+  color-scheme: light;
+  --pet-bg: #fff;
+  --pet-border: #d7ddff;
+  --pet-accent: #5667ff;
+}
+
+.edupet-widget {
+  border: 1px solid var(--pet-border);
+  border-radius: 14px;
+  background: var(--pet-bg);
+  max-width: 340px;
+  box-shadow: 0 6px 18px rgba(28, 35, 90, 0.12);
+}
+
+.edupet-toggle {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--pet-border);
+  padding: 10px 12px;
+  text-align: left;
+  background: #f3f6ff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.edupet-panel {
+  display: none;
+  padding: 12px;
+}
+
+.edupet-panel.is-open {
+  display: block;
+}
+
+.edupet-mood,
+.edupet-stage {
+  font-weight: 700;
+  color: #1f2550;
+  margin-bottom: 6px;
+}
+
+.edupet-message {
+  margin: 0 0 10px;
+  color: #40456b;
+}
+
+.edupet-stats {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+
+.edupet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.edupet-action {
+  border: 1px solid var(--pet-border);
+  border-radius: 999px;
+  background: white;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.edupet-action:hover {
+  border-color: var(--pet-accent);
+}
