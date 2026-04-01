@@ -1,9 +1,11 @@
 (function () {
-  var CURRENT_VERSION = '0.1.0';
+  var CURRENT_VERSION = '0.1.1';
+  var selectedVersion = window.EDUPET_SELECTED_VERSION || CURRENT_VERSION;
 
   window.EduPetConfig = {
-    version: CURRENT_VERSION,
-    storageKey: 'edupet.v1.state',
+    version: selectedVersion,
+    latestVersion: CURRENT_VERSION,
+    storageKey: 'edupet.v1.state.' + selectedVersion,
     statBounds: {
       energy: { min: 0, max: 100 },
       confidence: { min: 0, max: 100 },
@@ -43,7 +45,8 @@
       createdAt: null,
       updatedAt: null,
       lastEvent: null,
-      lastEventAt: null
+      lastEventAt: null,
+      history: []
     },
     moods: ['happy', 'sleepy', 'curious', 'proud', 'worried'],
     moodMessages: {
