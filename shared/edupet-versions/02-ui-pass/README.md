@@ -1,12 +1,13 @@
 # EduPet 02 - UI pass
 
-Source branch: `assistant-ui-pass`
+Source branch/workstream: `assistant-ui-pass` (preserved snapshot)
 
 This version represents the richer UI-focused EduPet variant.
 
-## Expected source path
+## Consolidated source paths
 
-- `shared/edupet-next/`
+- Core/UI implementation copied from `shared/edupet-next/`
+- Supporting docs (`INTEGRATION.md`, `EVENTS.md`, `PARENT-DASHBOARD.md`) copied from `shared/edupet/`
 
 ## Main files
 

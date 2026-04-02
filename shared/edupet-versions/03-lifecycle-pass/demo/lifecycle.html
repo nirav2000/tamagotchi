@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduPet Lifecycle Demo</title>
+  <link rel="stylesheet" href="../edupet.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f6f8ff; color: #1f2550; }
+    main { max-width: 960px; margin: 0 auto; }
+    .card { background: #fff; border: 1px solid #d5dcff; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    button { border: 1px solid #c9d0ff; background: white; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+    pre { background: #f7f9ff; border-radius: 10px; padding: 12px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>EduPet Lifecycle Snapshot Demo</h1>
+    <p>Lifecycle extension + base EduPet behavior in one standalone folder.</p>
+
+    <div class="card">
+      <h2>Lifecycle controls</h2>
+      <div class="actions">
+        <button id="regressBtn">Regress</button>
+        <button id="advanceBtn">Advance</button>
+        <button id="resetLifecycleBtn">Reset Lifecycle</button>
+      </div>
+      <pre id="lifecycleView"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Record a lifecycle-tagged EduPet event</h2>
+      <div class="actions">
+        <button data-event="session_start">session_start</button>
+        <button data-event="task_completed">task_completed</button>
+        <button data-event="focus_minute">focus_minute</button>
+      </div>
+      <pre id="stateView"></pre>
+    </div>
+  </main>
+
+  <script src="../edupet-config.js"></script>
+  <script src="../edupet-storage.js"></script>
+  <script src="../edupet-core.js"></script>
+  <script src="../edupet-ui.js"></script>
+  <script src="../edupet-lifecycle.js"></script>
+  <script>
+    (function () {
+      var lifecycleView = document.getElementById('lifecycleView');
+      var stateView = document.getElementById('stateView');
+
+      function render() {
+        lifecycleView.textContent = JSON.stringify(window.EduPetLifecycle.getState(), null, 2);
+        stateView.textContent = JSON.stringify(window.EduPet.getState(), null, 2);
+      }
+
+      document.getElementById('advanceBtn').onclick = function () {
+        window.EduPetLifecycle.advance();
+        render();
+      };
+
+      document.getElementById('regressBtn').onclick = function () {
+        window.EduPetLifecycle.regress();
+        render();
+      };
+
+      document.getElementById('resetLifecycleBtn').onclick = function () {
+        window.EduPetLifecycle.reset();
+        render();
+      };
+
+      Array.prototype.forEach.call(document.querySelectorAll('[data-event]'), function (btn) {
+        btn.addEventListener('click', function () {
+          var type = btn.getAttribute('data-event');
+          var event = window.EduPetLifecycle.annotateEvent({ type: type, appId: 'lifecycle-demo' });
+          window.EduPet.recordEvent(event);
+          render();
+        });
+      });
+
+      window.EduPet.onChange(render);
+      render();
+    })();
+  </script>
+</body>
+</html>

@@ -1,12 +1,12 @@
 # EduPet 01 - Main stable
 
-Source branch: `main`
+Source branch/workstream: `main` (preserved snapshot)
 
 This version represents the current main EduPet implementation.
 
-## Expected source path
+## Consolidated source path
 
-- `shared/edupet/`
+- Copied from `shared/edupet/`
 
 ## Main files
 
@@ -17,6 +17,12 @@ This version represents the current main EduPet implementation.
 - `edupet.css`
 - `demo/index.html`
 - `dashboard/index.html`
+
+## Included docs from source
+
+- `INTEGRATION.md`
+- `EVENTS.md`
+- `PARENT-DASHBOARD.md`
 
 ## Status
 
